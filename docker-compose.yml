@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  trendradar:
+    image: auto-news-radar-app:latest
+    container_name: trendradar
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - trendradar_network
+    volumes:
+      - trendradar_data:/app/data
+
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: rsshub
+    ports:
+      - "1200:1200"
+    environment:
+      - TZ=Asia/Shanghai
+      - NODE_ENV=production
+      - CACHE_TYPE=memory
+      - CACHE_EXPIRE=3600
+      - CACHE_CONTENT_EXPIRE=1800
+      - REQUEST_TIMEOUT=30000
+    restart: unless-stopped
+    networks:
+      - trendradar_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - trendradar_network
+    volumes:
+      - redis_data:/data
+
+networks:
+  trendradar_network:
+    driver: bridge
+
+volumes:
+  trendradar_data:
+  redis_data:

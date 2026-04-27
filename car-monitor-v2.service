@@ -1,0 +1,15 @@
+[Unit]
+Description=Car Industry Monitor V2.0
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/weibo-hotsearch
+ExecStart=/opt/weibo-hotsearch/venv/bin/python main.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
