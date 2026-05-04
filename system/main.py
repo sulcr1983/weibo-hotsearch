@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""汽车行业舆情监控 V4.0 — 统一入口"""
+"""汽车行业舆情监控 V4.1 — 统一入口"""
 import asyncio
 import gc
 import json
@@ -24,6 +24,7 @@ from collector.web_scraper import WebScraper
 from collector.weibo_collector import collect as weibo_collect
 from collector.auto_media import AutoScraper
 from processor.brand_matcher import match_brand, strip_html, is_financial_brief, is_digest, is_ugc, is_opinion
+from processor.scoring import calc_article_score, score_tier
 from processor.keyworder import extract_keywords
 from processor.deduplicator import compute_simhash, cluster_article
 from processor.classifier import classify_dimension
@@ -83,6 +84,15 @@ async def news_collect():
                     continue
                 if is_opinion(title, raw.get('source', '')):
                     continue
+                # 评分：品牌命中位置 + 来源权重 + 强信号 + 噪音惩罚 + 标题质量
+                title_hit = match_brand(title, '')[0] is not None
+                score_info = calc_article_score(
+                    title, content, raw.get('source', ''),
+                    brand_hit_title=title_hit,
+                    source_level=raw.get('source_level', 3))
+                tier = score_tier(score_info['score'])
+                if tier == 'discard':
+                    continue
                 dim = classify_dimension(title, content)
                 if not dim:
                     dim = await classify_with_llm(title, content, AI_API_KEY, AI_API_URL, AI_MODEL)
@@ -102,6 +112,7 @@ async def news_collect():
                     'brand': brand, 'keywords': json.dumps(kws, ensure_ascii=False) if kws else '[]',
                     'content': content[:800],
                     'simhash': sh, 'event_id': None, 'summary': None,
+                    'score': score_info['score'], 'score_tier': tier,
                     'created_at': art_time,
                 }
                 eid = await cluster_article(article, db)

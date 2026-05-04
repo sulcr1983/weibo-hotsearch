@@ -17,6 +17,7 @@ SQL_ARTICLES = '''CREATE TABLE IF NOT EXISTS articles (
     title TEXT NOT NULL, url TEXT NOT NULL, source TEXT NOT NULL,
     source_level INT DEFAULT 1, brand TEXT NOT NULL, keywords TEXT,
     content TEXT, simhash TEXT, event_id TEXT, summary TEXT,
+    score INT DEFAULT 50, score_tier TEXT DEFAULT 'weak',
     is_pushed INT DEFAULT 0, push_date TEXT, created_at TEXT NOT NULL)'''
 
 SQL_EVENTS = '''CREATE TABLE IF NOT EXISTS events (
@@ -111,12 +112,14 @@ class Database:
     async def _do_insert(self, a: dict):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
-                'INSERT OR IGNORE INTO articles (url_hash,title,url,source,source_level,brand,keywords,content,simhash,event_id,summary,is_pushed,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                'INSERT OR IGNORE INTO articles (url_hash,title,url,source,source_level,brand,keywords,content,simhash,event_id,summary,score,score_tier,is_pushed,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 (a['url_hash'], a['title'], a['url'], a['source'], a.get('source_level', 1),
                  a['brand'], a.get('keywords'), a.get('content'), a.get('simhash'),
-                 a.get('event_id'), a.get('summary'), 0, a.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
+                 a.get('event_id'), a.get('summary'),
+                 a.get('score', 50), a.get('score_tier', 'weak'),
+                 0, a.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
             await db.commit()
-        logger.info(f"入库: [{a['brand']}] {a['title'][:30]}")
+        logger.info(f"入库: [{a['brand']}] {a['title'][:30]} (score={a.get('score','?')})")
 
     async def _do_event(self, d: dict):
         eid = d['event_id']

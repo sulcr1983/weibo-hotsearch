@@ -89,15 +89,29 @@ class ReportBuilder:
         news = await self.db.get_articles(hours=24, is_pushed=0)
         weibo = await self.db.get_weibo_events(hours=24)
         news = _merge_by_event(news)
-        for n in news:
+        # 日报：优先 strong (score>=65)，保底取 weak 中 score 最高的补齐
+        strong = [n for n in news if n.get('score', 0) >= 65]
+        strong.sort(key=lambda x: x.get('score', 0), reverse=True)
+        if len(strong) < 3:
+            weak = sorted(
+                [n for n in news if n.get('score', 0) >= 35],
+                key=lambda x: x.get('score', 0), reverse=True)
+            for w in weak:
+                if w not in strong:
+                    strong.append(w)
+                if len(strong) >= 8:
+                    break
+        for n in strong:
             clean_content = strip_html(n.get('content', '') or '')
             n['summary'] = clean_content[:40].strip()
-        return {'date': date, 'weibo': weibo, 'news': news, 'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M')}
+        return {'date': date, 'weibo': weibo, 'news': strong, 'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M')}
 
     async def build_weekly(self) -> dict:
         ws = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
         we = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         articles = await self.db.get_articles(hours=24 * 7)
+        # 周报：取 score>=35 的文章
+        articles = [a for a in articles if a.get('score', 0) >= 35]
         articles = _merge_by_event(articles)
         by_brand: dict[str, dict[str, list]] = {}
         total = 0

@@ -58,8 +58,7 @@ def render_daily_feishu(
             label = item.get('label', '')
             appear = item.get('appear_count', 1)
             brand_tag = brand_badge_feishu(brand) if brand else ''
-            dc = P["danger"]
-            label_str = f'<font color="{dc}">{label}</font>' if label in ('爆','热','新','沸','置顶') else label
+            label_str = f'<font color="#FF4D4F">{label}</font>' if label in ('爆','热','新','沸','置顶') else label
             count_hint = f' 🕐×{appear}' if appear > 1 else ''
             line = f"{brand_tag} [{keyword}]({link}){count_hint}"
             if label_str:
