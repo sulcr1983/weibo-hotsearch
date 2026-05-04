@@ -1,0 +1,125 @@
+# 汽车行业舆情监控 V4.0 — 数据源统一配置
+# 新增源：加一个条目即可，无需改代码
+
+rss_feeds:
+  # ── 直接RSS：科技/财经/汽车 ──
+  - name: 36氪
+    url: https://36kr.com/feed
+    level: 3
+  - name: 钛媒体
+    url: https://www.tmtpost.com/feed
+    level: 3
+
+  # ── RSSHub 聚合（已验证可用）──
+  - name: 第一财经快讯
+    url: "{RSSHUB_HOST}/yicai/brief"
+    level: 2
+  - name: 虎嗅
+    url: "{RSSHUB_HOST}/huxiu/article"
+    level: 3
+  - name: 知乎日报
+    url: "{RSSHUB_HOST}/zhihu/daily"
+    level: 3
+  - name: 36氪快讯
+    url: "{RSSHUB_HOST}/36kr/newsflashes"
+    level: 3
+  - name: 财联社深度
+    url: "{RSSHUB_HOST}/cls/depth"
+    level: 2
+  - name: 财联社热门
+    url: "{RSSHUB_HOST}/cls/hot"
+    level: 2
+  - name: 澎湃新闻精选
+    url: "{RSSHUB_HOST}/thepaper/featured"
+    level: 2
+  - name: 财新最新
+    url: "{RSSHUB_HOST}/caixin/latest"
+    level: 2
+  - name: 华尔街见闻
+    url: "{RSSHUB_HOST}/wallstreetcn/news/global"
+    level: 2
+
+web_feeds:
+  - name: 新浪汽车
+    url: https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&num=20
+    level: 2
+    method: api
+    api_config:
+      item_path: result.data
+      title_key: title
+      link_key: url
+      time_key: ctime
+  - name: 搜狐汽车
+    url: https://auto.sohu.com/
+    level: 2
+    method: html
+    max_items: 30
+    selectors:
+      article: "a[href*='/a/']"
+  - name: 第一电动
+    url: https://www.d1ev.com/news
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/news/']"
+  - name: 中国汽车报
+    url: https://www.cnautonews.com/
+    level: 1
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='.html']"
+    no_verify_ssl: true
+  - name: 网易汽车
+    url: https://auto.163.com/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='163.com']"
+  - name: 盖世汽车
+    url: https://auto.gasgoo.com/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/news/']"
+  - name: 搜狐新闻
+    url: https://news.sohu.com/
+    level: 3
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='sohu.com/a/']"
+
+# 🆕 汽车垂媒（HTML直采，取a标签自身文本）
+auto_feeds:
+  - name: 汽车之家
+    url: https://m.autohome.com.cn/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/news/']"
+  - name: 懂车帝
+    url: https://www.dongchedi.com/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/article/']"
+  - name: 爱卡汽车
+    url: https://info.xcar.com.cn/list/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/info/']"
+  - name: 易车网新闻
+    url: https://news.yiche.com/
+    level: 2
+    method: html
+    max_items: 20
+    selectors:
+      article: "a[href*='/']"

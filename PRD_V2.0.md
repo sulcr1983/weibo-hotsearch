@@ -1,122 +1,162 @@
-# 汽车行业舆情监控系统 — 需求文档 V2.0
+# 汽车行业舆情监控系统 — 需求文档 V4.1
 
 ## 一、产品定位
 
-面向汽车行业从业者的自动化舆情监控与推送系统，覆盖微博热搜 + 新闻媒体双数据源，通过 AI 清洗 + SimHash 聚类 + 品牌门禁三层过滤，每日 09:00 自动推送精选日报。
+面向汽车行业从业者的自动化舆情监控与推送系统。接入 22 个权威数据源（11 科技财经 + 7 网页直采 + 4 汽车垂媒），通过品牌匹配 → 四维度门禁 → 汇总过滤 → 金融过滤 → SimHash 去重五层筛选，自动推送日报/周报/月报到飞书和邮箱。
 
 ## 二、核心功能
 
-### 2.1 数据采集
-| 数据源 | 采集方式 | 频率 | 说明 |
-|--------|---------|------|------|
-| 微博热搜 | BeautifulSoup 解析 | 每小时 | V1.0 模块，Sidecar 隔离运行 |
-| RSS 新闻源 | feedparser + RSSHub | 每小时 | V2.0 模块，11 个数据源 |
-| 全文提取 | trafilatura → readability → meta | 采集时 | 三段式降级提取 |
+### 2.1 数据采集（22 源）
 
-### 2.2 数据处理
-| 处理环节 | 算法/方法 | 说明 |
-|---------|----------|------|
-| 品牌门禁 | 正则双门禁（标题+正文前200字） | 10 组品牌严格匹配 |
-| AI 清洗 | 智谱清言 glm-4-flash | 剔除琐碎负面，保留行业价值 |
-| 去重 | url_hash (MD5) | URL 级别防重 |
-| 事件聚类 | 手写 SimHash (64bit) + 汉明距离 ≤3 | 语义相似文章归入同一事件 |
-| 关键词提取 | Jieba TF-IDF top-10 | 用于 Event_ID 生成 |
+| 数据源 | 采集方式 | 频率 | 来源数 |
+|--------|---------|------|--------|
+| RSS 科技财经 | feedparser + RSSHub Docker | 每小时 | 11 个 |
+| 网页直采 | BeautifulSoup / JSON API | 每小时 | 7 个（新浪/搜狐/第一电动/中国汽车报/网易汽车/盖世汽车/搜狐新闻） |
+| 汽车垂媒 | HTML 直采（取 a 标签自身文本） | 每小时 | 4 个（汽车之家/懂车帝/爱卡汽车/易车网） |
+| 微博热搜 | HTTP API | 每 60 分钟 | 1 个 |
+
+### 2.2 五层筛选流水线
+
+| 层级 | 环节 | 说明 |
+|------|------|------|
+| ① 品牌门禁 | 10 品牌 × 扩展子关键词，标题+正文双门禁 | 非品牌内容直接丢弃 |
+| ② 四维度门禁 | 关键词评分制（每维度 18-22 词），未命中则 LLM 二次判断 | 非业务内容直接丢弃 |
+| ③ 汇总过滤 | 标题含"晨报/晚报/汇总/前瞻"等汇总类关键词直接丢弃 | 避免"EV晨报"混入 |
+| ④ 金融过滤 | 30+ 金融术语正则，命中 ≥3 个丢弃 | 股市快讯不入库 |
+| ⑤ 去重 | URL MD5 + python-simhash C 扩展 + 标题相似度合并 | 跨来源/跨时间事件合并 |
 
 ### 2.3 推送输出
-| 推送类型 | 时间 | 渠道 | 内容 |
-|---------|------|------|------|
-| 每日日报 | 09:00 | 飞书 + 邮件 | 微博热搜 + 新闻热点，品牌彩色标签 |
-| 每周周报 | 周一 08:00 | 飞书 + 邮件 | AI 行业分析 + 品牌分类明细 |
 
-### 2.4 品牌白名单（严格锁定）
-小米汽车、鸿蒙智行（问界/智界/尊界/享界/尚界）、零跑汽车、理想汽车、蔚来汽车（含萤火虫/乐道）、极氪汽车、阿维塔、智己汽车、比亚迪（含仰望/腾势/方程豹）、特斯拉
+| 类型 | 时间 | 渠道 | 内容 |
+|------|------|------|------|
+| 日报 | 每日 09:00 | 飞书 + 邮件 | 新闻热点按品牌分组，40 字摘要 + 超链接 |
+| 周报 | 周一 08:00 | 飞书 + 邮件 | AI 150-200 字核心洞察 + 品牌 4 维度分类 + 超链接 + 摘要 |
+| 月报 | 每月 1 日 08:00 | 飞书 + 邮件 | AI 月度总结 + 品牌频次排行榜 + 热搜词列表 |
+
+### 2.4 品牌白名单（含扩展子关键词）
+
+小米汽车（小米汽车/小米SU7/小米SU/小米YU7）、鸿蒙智行（问界/智界/尊界/享界/尚界/鸿蒙智行）、零跑汽车（零跑/零跑C）、理想汽车（理想汽车/理想L/理想MEGA/理想i/理想ONE）、蔚来汽车（蔚来/萤火虫/乐道）、极氪汽车（极氪/极氪00）、阿维塔、智己汽车（智己/智己L）、比亚迪（比亚迪/仰望/腾势/方程豹）、特斯拉（特斯拉/Tesla/Model Y/Model 3/Cybertruck/FSD）
+
+### 2.5 四维度分类
+
+| 维度 | 内容范围 |
+|------|---------|
+| 🎨 创意营销/公关 | 跨界联名、危机公关、辟谣、声明、营销活动（18 词） |
+| 📤 投放与合作 | KOL 商单、开屏投放、签约、战略合作（18 词） |
+| 🌟 明星与IP | 代言人、综艺植入、联名款、冠名、赛事赞助（17 词） |
+| ⚙️ 核心活动 | 新车上市、技术发布、交付、财报、路试（22 词） |
 
 ## 三、技术架构
 
-### 3.1 Sidecar 双模块架构
+### 3.1 统一入口（单进程）
+
 ```
-┌─────────────────────────────────────────────┐
-│  Ubuntu Server                             │
-│                                             │
-│  ┌──────────────┐  ┌──────────────────────┐ │
-│  │ V1.0 Sidecar │  │ V2.0 Main            │ │
-│  │ port:8002    │  │ port:8001            │ │
-│  │ 微博热搜采集  │  │ RSS新闻采集           │ │
-│  │ AI清洗+推送   │  │ 品牌匹配+聚类+推送    │ │
-│  │ weibo_*.db   │  │ news_articles.db     │ │
-│  └──────────────┘  └──────────────────────┘ │
-│                                             │
-│  ┌──────────────┐  ┌───────┐  ┌──────────┐ │
-│  │ TrendRadar   │  │ Redis │  │ RSSHub   │ │
-│  │ port:8000    │  │ :6379 │  │ :1200    │ │
-│  └──────────────┘  └───────┘  └──────────┘ │
-└─────────────────────────────────────────────┘
+car-monitor-v3 (port 8001)
+├─ collector/   RSS + Web + Weibo + 垂媒
+├─ processor/   品牌/维度/LLM/金融/去重
+├─ storage/     SQLite(WAL) + asyncio.Queue
+├─ reporter/    日报/周报/月报 + AI总结 + 健康仪表盘
+└─ templates/   飞书卡片 + 邮件HTML（品牌色胶囊标签）
+
+辅助：Docker RSSHub(1200) + Redis(6379)
 ```
 
-### 3.2 V2.0 模块依赖链
-```
-constants.py → logger.py → storage.py → processor.py → fetcher.py → reporter.py → main.py
-     ↓              ↓           ↓            ↓             ↓            ↓
-  品牌白名单     日志配置    DataVault     SimHash      RSS+提取     飞书+邮件
-  RSS源配置                 WAL模式       品牌匹配      三段降级      品牌色彩
-  品牌色彩                  异步队列       Jieba分词     超时熔断      日报+周报
-```
+### 3.2 数据源配置（YAML）
+
+所有 22 个数据源统一在 `sources/sources.yml` 管理，新增源只需加一个 YAML 条目，零代码改动。
 
 ### 3.3 关键技术选型
-| 组件 | 选型 | 理由 |
-|------|------|------|
-| Web框架 | FastAPI + Uvicorn | 异步高性能，自动API文档 |
-| 数据库 | SQLite WAL + aiosqlite | 单机轻量，WAL并发读写 |
-| 写入队列 | asyncio.Queue(maxsize=500) | 纯异步，与FastAPI事件循环融合 |
-| RSS解析 | feedparser | 业界标准，容错强 |
-| 全文提取 | trafilatura → readability-lxml → meta | 三段降级，覆盖率高 |
-| 中文分词 | Jieba | 成熟稳定，自定义词典 |
-| 相似度 | 手写 SimHash 64bit | 50行核心代码，无第三方依赖 |
-| AI清洗 | 智谱清言 glm-4-flash | 性价比高，中文理解强 |
-| 推送 | 飞书 Interactive Card + QQ SMTP | 双渠道冗余 |
-| 定时调度 | APScheduler AsyncIOScheduler | 原生异步，Cron+Interval |
-| 重试 | Tenacity wait_exponential | 仅用于网络请求，推送不复重 |
-| 日志 | TimedRotatingFileHandler | 按天轮转，30天保留 |
-| 文件锁 | filelock | 跨平台，替代 fcntl |
-| Docker | docker-compose | RSSHub + Redis + TrendRadar |
 
-### 3.4 数据库设计
-**articles 表**: url_hash(PK) | title | url | source | source_level | brand | keywords(JSON) | content | simhash | event_id | summary | is_pushed | push_date | created_at
+| 组件 | 选型 |
+|------|------|
+| Web 框架 | FastAPI + Uvicorn（异步单端口） |
+| 数据库 | SQLite WAL + aiosqlite |
+| 去重 | python-simhash C 扩展（Hamming≤20）+ 标题相似度兜底 |
+| 中文分词 | Jieba + 自定义品牌词典 |
+| AI 总结 | 火山引擎 Ark (doubao-seed-2-0-pro-260215) |
+| 推送 | 飞书 Interactive Card + QQ SMTP |
+| 调度 | APScheduler AsyncIOScheduler |
+| 日志 | TimedRotatingFileHandler（8 天轮转） |
+| 源配置 | PyYAML |
 
-**events 表**: event_id(PK) | brand | title | keywords(JSON) | article_count | sources(JSON) | first_seen | last_seen
+### 3.4 数据库
 
-**weibo_hot_search 表(V1.0)**: id | brand_group | keyword | title | link | created_at | is_pushed | source
+**articles**：url_hash(PK) | title | url | source | source_level | brand | keywords(JSON) | content | simhash | event_id | summary | is_pushed | push_date | created_at
 
-## 四、部署架构
+**events**：event_id(PK) | brand | title | keywords(JSON) | article_count | sources(JSON) | first_seen | last_seen
 
-### 4.1 服务器信息
-- OS: Ubuntu 24.04 64bit
-- IP: <服务器IP>
-- 部署路径: /opt/weibo-hotsearch
-- V1.0: systemd service (weibo-monitor.service), port 8002
-- V2.0: systemd service (car-monitor-v2.service), port 8001
-- Docker: TrendRadar(8000) + Redis(6379) + RSSHub(1200)
+**weibo_hot**（v3_weibo.db）：id | brand_group | title | link | label | is_hotgov | rank | created_at
 
-### 4.2 数据保留策略
-- 文章数据: 8 天自动清理
-- 日志文件: 30 天轮转
-- 数据库: WAL 模式，cache_size=64MB
+## 四、调度策略
+
+| 任务 | 触发器 | 说明 |
+|------|--------|------|
+| 新闻采集 | interval(hours=1) | 22 源全量采集 |
+| 微博采集 | interval(minutes=60) | 微博热搜 API → 品牌匹配 |
+| 日报 | cron(09:00) | 昨日 40 字摘要汇总 |
+| 周报 | cron(周一 08:00) | 7 天汇总 + AI 总结 |
+| 月报 | cron(每月 1 日 08:00) | 品牌频次 + 热搜词 |
+| 清理 | cron(09:05) | 新闻 8 天 / 微博 30 天 |
 
 ## 五、API 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | / | V2.0 系统状态 |
-| GET | /v2/articles | 查询新闻文章 |
-| GET | /v2/events | 查询事件聚类 |
-| POST | /v2/collect | 手动触发采集 |
-| POST | /v2/report/daily | 手动触发日报 |
-| POST | /v2/report/weekly | 手动触发周报 |
+| GET | `/` | 系统状态 |
+| GET | `/health` | 来源健康仪表盘（成功/失败/类型分布/DB统计） |
+| POST | `/collect` | 手动触发采集 |
+| POST | `/report/daily` | 手动触发日报 |
+| POST | `/report/weekly` | 手动触发周报 |
+| POST | `/report/monthly` | 手动触发月报 |
 
 ## 六、质量红线
-1. 品牌白名单严格锁定，不可发散
-2. 推送函数不加 @retry（非幂等）
-3. AI 清洗失败降级为原始数据推送
-4. 数据库写入 3 次指数退避重试
-5. 内存超 50 条触发 GC
-6. 写入队列满时丢弃而非阻塞
+
+1. 品牌白名单严格锁定 — 变更需同时改 BRAND_PATTERNS + BRAND_COLORS
+2. 所有入库内容必须通过四维度门禁 + 汇总过滤器
+3. 金融快讯必须过滤
+4. 推送函数不加 retry（非幂等）
+5. AI 生成失败降级为原始数据推送
+6. 异步队列满时丢弃而非阻塞
+7. 单源异常不影响整体采集
+
+## 七、数据保留
+
+- 新闻 8 天，微博 30 天
+- 日志 8 天轮转
+- 数据库 WAL 模式，cache_size=64MB
+
+## 八、项目结构
+
+```
+/opt/weibo-hotsearch/
+├── .env                          # 配置（不纳入版本管理）
+├── .gitignore
+├── system/                       # 核心黑盒
+│   ├── main.py                   # V4.0 统一入口
+│   ├── config.py                 # 路径锚点 + 环境变量
+│   ├── requirements.txt          # 13 个依赖
+│   ├── README.md                 # 软件说明书
+│   ├── collector/                # 采集层（4 文件）
+│   ├── processor/                # 处理层（5 文件）
+│   ├── storage/                  # 存储层（1 文件）
+│   ├── reporter/                 # 推送层（5 文件）
+│   ├── templates/                # 视觉层（5 文件）
+│   ├── sources/                  # 数据源 YAML 配置
+│   ├── tests/                    # 回归测试
+│   │   └── test_v3.py            # 8 项测试 ALL PASS
+│   └── services/                 # systemd 服务
+│       └── car-monitor-v3.service
+├── data/                         # 数据库
+└── logs/                         # 日志
+```
+
+## 九、部署
+
+```bash
+cd /opt/weibo-hotsearch
+python3 -m venv venv
+./venv/bin/pip install -r system/requirements.txt
+sudo cp system/services/car-monitor-v3.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now car-monitor-v3
+```

@@ -1,12 +1,9 @@
-import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+from config import LOG_DIR
 
-LOG_FILE = os.path.join(LOG_DIR, 'monitor.log')
+LOG_FILE = str(LOG_DIR / 'monitor.log')
 
 
 def get_logger(name: str = 'car_monitor') -> logging.Logger:
