@@ -87,7 +87,7 @@ class ReportBuilder:
     async def build_daily(self) -> dict:
         date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         news = await self.db.get_articles(hours=24, is_pushed=0)
-        weibo = await self.db.get_weibo(hours=24)
+        weibo = await self.db.get_weibo_events(hours=24)
         news = _merge_by_event(news)
         for n in news:
             clean_content = strip_html(n.get('content', '') or '')
@@ -143,25 +143,35 @@ class ReportBuilder:
         rows = await self.db.get_weibo_monthly(ym)
         stats = await self.db.get_weibo_brand_stats(ym)
 
-        brand_items: dict[str, list] = {}
-        for r in rows:
-            brand_items.setdefault(r['brand_group'], []).append({
-                'title': r['title'],
-                'date': r['created_at'][:10] if r['created_at'] else '',
-            })
-
+        # 品牌维度：事件数 + 总出现次数
         brand_summary = []
         for s in stats:
-            b = s['brand']
+            brand_items = []
+            for r in rows:
+                if r['brand'] != s['brand']:
+                    continue
+                first = r['first_seen_at'][:10] if r['first_seen_at'] else ''
+                last = r['last_seen_at'][:10] if r['last_seen_at'] else ''
+                duration = f"{first}~{last}" if first != last else first
+                brand_items.append({
+                    'keyword': r['keyword'],
+                    'appear_count': r['appear_count'],
+                    'duration': duration,
+                    'status': r['status'],
+                })
             brand_summary.append({
-                'brand': b,
-                'count': s['count'],
-                'items': brand_items.get(b, [])[:20],
+                'brand': s['brand'],
+                'event_count': s['event_count'],
+                'total_appears': s['total_appears'],
+                'keywords': brand_items[:15],
             })
 
+        total_events = sum(s['event_count'] for s in stats)
+        total_appears = sum(s['total_appears'] for s in stats)
         return {
             'year_month': ym, 'label': label,
             'brands': brand_summary,
-            'total_mentions': sum(s['count'] for s in stats),
+            'total_events': total_events,
+            'total_appears': total_appears,
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
         }

@@ -34,7 +34,7 @@ class RssFetcher:
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=FETCH_TIMEOUT),
                 headers={
-                    'User-Agent': 'Mozilla/5.0 (compatible; CarMonitor/3.0)',
+                    'User-Agent': 'Mozilla/5.0 (compatible; CarMonitor/4.1)',
                     'Accept': 'text/html,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'zh-CN,zh;q=0.9',
                 }

@@ -120,8 +120,19 @@ async def weibo_collect_task():
     try:
         sess = await get_weibo_session()
         items = await weibo_collect(sess)
+        new_count = 0
         for it in items:
-            await db.insert_weibo(it)
+            result = await db.upsert_weibo_event(
+                keyword=it['keyword'], brand=it['brand'],
+                link=it.get('link', ''), label=it.get('label', ''),
+                heat=it.get('heat', 0))
+            if result['is_new']:
+                new_count += 1
+        # 收尾：3小时未出现的热搜标记为 ended
+        await db.end_stale_events(hours=3)
+        logger.info(f"微博: {new_count} 新事件 / {len(items)} 当前命中共 {len(items)}")
+        if new_count > 0:
+            logger.info(f"🔥 微博新热搜: {new_count} 条首次出现（已推送）")
     except Exception as e:
         logger.error(f"微博采集异常: {e}")
 
@@ -167,10 +178,49 @@ async def clean_task():
     db.enqueue('clean', {})
 
 
+def _startup_check() -> bool:
+    """启动自检：验证运行时关键依赖可用"""
+    failed = []
+    for name, import_path in [
+        ('aiohttp', 'aiohttp'),
+        ('aiosqlite', 'aiosqlite'),
+        ('feedparser', 'feedparser'),
+        ('bs4 (BeautifulSoup)', 'bs4'),
+        ('simhash', 'simhash'),
+        ('jieba', 'jieba'),
+        ('apscheduler', 'apscheduler'),
+        ('fastapi', 'fastapi'),
+        ('uvicorn', 'uvicorn'),
+        ('yaml', 'yaml'),
+        ('dotenv', 'dotenv'),
+    ]:
+        try:
+            __import__(import_path)
+        except ImportError:
+            logger.error(f"  缺少依赖: {name} (pip install {import_path})")
+            failed.append(name)
+    if failed:
+        logger.error(f"启动自检: {len(failed)} 项失败 - {', '.join(failed)}")
+        return False
+    # 预初始化 jieba 分词器
+    try:
+        import jieba
+        jieba.initialize()
+    except Exception:
+        pass
+    logger.info(f"启动自检: 所有依赖可用 ({len(failed)} 失败)")
+    return len(failed) == 0
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.start()
-    logger.info("[V3.0] Database started")
+    # 启动自检：验证关键依赖可用
+    ok = _startup_check()
+    if not ok:
+        logger.error("启动自检失败，请检查 system/requirements.txt 安装状态")
+    else:
+        logger.info("[V4.1] Database started")
 
     scheduler.add_job(news_collect, IntervalTrigger(hours=1), id='news', replace_existing=True)
     scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=120), id='weibo', replace_existing=True)
@@ -194,15 +244,15 @@ async def lifespan(app: FastAPI):
     global _session
     if _session and not _session.closed:
         await _session.close()
-    logger.info("[V3.0] Shutdown")
+    logger.info("[V4.1] Shutdown")
 
 
-app = FastAPI(title='汽车行业舆情监控 V4.0', version='4.0.0', lifespan=lifespan)
+app = FastAPI(title='汽车行业舆情监控 V4.1', version='4.1.0', lifespan=lifespan)
 
 
 @app.get('/')
 async def root():
-    return {'status': 'running', 'version': '4.0.0', 'message': '汽车行业舆情监控 V4.0', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    return {'status': 'running', 'version': '4.1.0', 'message': '汽车行业舆情监控 V4.1', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 
 @app.get('/health')
@@ -240,5 +290,5 @@ async def api_monthly():
 if __name__ == '__main__':
     import json
     import uvicorn
-    logger.info('[V3.0] Starting...')
+    logger.info('[V4.1] Starting...')
     uvicorn.run('main:app', host='0.0.0.0', port=8001, reload=False)

@@ -1,4 +1,4 @@
-"""统一数据库 — SQLite(WAL) + 异步写入队列 (V3)"""
+"""统一数据库 — SQLite(WAL) + 异步写入队列 (V4.1)"""
 import asyncio
 import hashlib
 import json
@@ -25,15 +25,13 @@ SQL_EVENTS = '''CREATE TABLE IF NOT EXISTS events (
     article_count INT DEFAULT 1, sources TEXT,
     first_seen TEXT NOT NULL, last_seen TEXT NOT NULL)'''
 
-SQL_WEIBO = '''CREATE TABLE IF NOT EXISTS weibo_hot (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, brand_group TEXT NOT NULL,
-    title TEXT NOT NULL, link TEXT, label TEXT, is_hotgov INT DEFAULT 0,
-    rank INT, created_at TEXT NOT NULL)'''
-
-SQL_MONTHLY = '''CREATE TABLE IF NOT EXISTS monthly_snapshot (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, year_month TEXT NOT NULL,
-    brand TEXT NOT NULL, keyword TEXT NOT NULL, count INT DEFAULT 1,
-    created_at TEXT NOT NULL)'''
+SQL_WEIBO = '''CREATE TABLE IF NOT EXISTS hotsearch_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT NOT NULL, brand TEXT NOT NULL,
+    link TEXT, label TEXT, heat INT DEFAULT 0,
+    first_seen_at TEXT NOT NULL, last_seen_at TEXT NOT NULL,
+    appear_count INT DEFAULT 1, status TEXT DEFAULT "active",
+    UNIQUE(keyword, brand))'''
 
 INDEXES_ARTICLES = [
     'CREATE INDEX IF NOT EXISTS idx_articles_brand ON articles(brand)',
@@ -44,10 +42,9 @@ INDEXES_ARTICLES = [
 ]
 
 INDEXES_WEIBO = [
-    'CREATE INDEX IF NOT EXISTS idx_weibo_brand ON weibo_hot(brand_group)',
-    'CREATE INDEX IF NOT EXISTS idx_weibo_created ON weibo_hot(created_at)',
-    'CREATE INDEX IF NOT EXISTS idx_monthly_ym ON monthly_snapshot(year_month)',
-    'CREATE INDEX IF NOT EXISTS idx_monthly_brand ON monthly_snapshot(brand)',
+    'CREATE INDEX IF NOT EXISTS idx_he_brand ON hotsearch_events(brand)',
+    'CREATE INDEX IF NOT EXISTS idx_he_status ON hotsearch_events(status)',
+    'CREATE INDEX IF NOT EXISTS idx_he_first ON hotsearch_events(first_seen_at)',
 ]
 
 PRAGMAS = [
@@ -68,7 +65,7 @@ class Database:
 
     async def start(self):
         await self._init_db(self.db_path, [SQL_ARTICLES, SQL_EVENTS], INDEXES_ARTICLES)
-        await self._init_db(self.weibo_path, [SQL_WEIBO, SQL_MONTHLY], INDEXES_WEIBO)
+        await self._init_db(self.weibo_path, [SQL_WEIBO], INDEXES_WEIBO)
         self._running = True
         self._writer = asyncio.create_task(self._worker())
         logger.info("数据库启动 (WAL模式)")
@@ -162,9 +159,9 @@ class Database:
             logger.info(f"清理文章{a.rowcount}条,事件{e.rowcount}条")
         wcut = (datetime.now() - timedelta(days=WEIBO_RETENTION_DAYS)).strftime('%Y-%m-%d %H:%M:%S')
         async with aiosqlite.connect(self.weibo_path) as db:
-            w = await db.execute('DELETE FROM weibo_hot WHERE created_at<?', (wcut,))
+            w = await db.execute("DELETE FROM hotsearch_events WHERE status='ended' AND last_seen_at<?", (wcut,))
             await db.commit()
-            logger.info(f"清理微博{w.rowcount}条")
+            logger.info(f"清理已结束微博事件 {w.rowcount} 条")
 
     def enqueue(self, op: str, data: dict):
         try:
@@ -205,40 +202,80 @@ class Database:
             cur = await db.execute('SELECT id,title,simhash,event_id FROM articles WHERE brand=? AND created_at>=?', (brand, cutoff))
             return [dict(r) for r in await cur.fetchall()]
 
-    async def insert_weibo(self, item: dict):
-        async with aiosqlite.connect(self.weibo_path) as db:
-            # 去重：同品牌+同标题 24小时内只保留一条
-            dup_cut = (datetime.now() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
-            cur = await db.execute(
-                'SELECT 1 FROM weibo_hot WHERE brand_group=? AND title=? AND created_at>=? LIMIT 1',
-                (item['brand_group'], item['title'], dup_cut))
-            if await cur.fetchone():
-                return
-            await db.execute(
-                'INSERT INTO weibo_hot (brand_group,title,link,label,is_hotgov,rank,created_at) VALUES (?,?,?,?,?,?,?)',
-                (item['brand_group'], item['title'], item.get('link', ''), item.get('label', ''),
-                 int(item.get('is_hotgov', False)), item.get('rank', 0), item['created_at']))
-            await db.commit()
-
-    async def get_weibo(self, hours: int = 24, limit: int = 200) -> List[dict]:
-        cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+    async def upsert_weibo_event(self, keyword: str, brand: str, link: str = '',
+                                   label: str = '', heat: int = 0) -> dict:
+        """微博热搜事件 upsert。返回 {'is_new': bool, 'event': dict}"""
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         async with aiosqlite.connect(self.weibo_path) as db:
             db.row_factory = aiosqlite.Row
-            cur = await db.execute('SELECT * FROM weibo_hot WHERE created_at>=? ORDER BY created_at DESC LIMIT ?', (cutoff, limit))
+            cur = await db.execute(
+                'SELECT id,appear_count,status FROM hotsearch_events WHERE keyword=? AND brand=?',
+                (keyword, brand))
+            existing = await cur.fetchone()
+            if existing:
+                await db.execute(
+                    'UPDATE hotsearch_events SET last_seen_at=?,appear_count=?,status="active" WHERE id=?',
+                    (now, existing['appear_count'] + 1, existing['id']))
+                await db.commit()
+                return {'is_new': False, 'event': dict(existing)}
+            else:
+                await db.execute(
+                    'INSERT INTO hotsearch_events (keyword,brand,link,label,heat,first_seen_at,last_seen_at,appear_count,status) VALUES (?,?,?,?,?,?,?,1,"active")',
+                    (keyword, brand, link, label, heat, now, now))
+                await db.commit()
+                cur2 = await db.execute('SELECT * FROM hotsearch_events WHERE rowid=last_insert_rowid()')
+                return {'is_new': True, 'event': dict(await cur2.fetchone())}
+
+    async def end_stale_events(self, hours: int = 3):
+        """将超过 hours 小时未再出现的 active 事件标记为 ended"""
+        cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+        async with aiosqlite.connect(self.weibo_path) as db:
+            cur = await db.execute(
+                'UPDATE hotsearch_events SET status="ended" WHERE status="active" AND last_seen_at<?',
+                (cutoff,))
+            await db.commit()
+            if cur.rowcount:
+                logger.info(f"微博事件收尾: {cur.rowcount} 条标记为 ended")
+
+    async def get_weibo_events(self, hours: int = 24, status: str = None, limit: int = 200) -> List[dict]:
+        """获取微博热搜事件列表"""
+        conds = []
+        params = []
+        if hours:
+            cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+            conds.append('first_seen_at>=?')
+            params.append(cutoff)
+        if status:
+            conds.append('status=?')
+            params.append(status)
+        params.append(limit)
+        where = f'WHERE {" AND ".join(conds)}' if conds else ''
+        async with aiosqlite.connect(self.weibo_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute(
+                f'SELECT * FROM hotsearch_events {where} ORDER BY first_seen_at DESC LIMIT ?', params)
             return [dict(r) for r in await cur.fetchall()]
 
     async def get_weibo_monthly(self, year_month: str) -> List[dict]:
-        async with aiosqlite.connect(self.weibo_path) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute("SELECT brand_group,title,created_at FROM weibo_hot WHERE created_at LIKE ? || '%' ORDER BY created_at DESC", (year_month,))
-            return [dict(r) for r in await cur.fetchall()]
-
-    async def get_weibo_brand_stats(self, year_month: str) -> List[dict]:
+        """月度统计：按品牌、关键词聚合，含 appear_count 和持续时长"""
         async with aiosqlite.connect(self.weibo_path) as db:
             cur = await db.execute(
-                "SELECT brand_group, COUNT(*) as cnt FROM weibo_hot WHERE created_at LIKE ? || '%' GROUP BY brand_group ORDER BY cnt DESC",
-                (year_month,))
-            return [{'brand': r[0], 'count': r[1]} for r in await cur.fetchall()]
+                "SELECT keyword, brand, link, appear_count, first_seen_at, last_seen_at, status "
+                "FROM hotsearch_events WHERE first_seen_at LIKE ? || '%' "
+                "ORDER BY appear_count DESC", (year_month,))
+            return [{'keyword': r[0], 'brand': r[1], 'link': r[2],
+                     'appear_count': r[3], 'first_seen_at': r[4],
+                     'last_seen_at': r[5], 'status': r[6]} for r in await cur.fetchall()]
+
+    async def get_weibo_brand_stats(self, year_month: str) -> List[dict]:
+        """品牌维度月度统计"""
+        async with aiosqlite.connect(self.weibo_path) as db:
+            cur = await db.execute(
+                "SELECT brand, COUNT(*) as event_count, SUM(appear_count) as total_appears "
+                "FROM hotsearch_events WHERE first_seen_at LIKE ? || '%' "
+                "GROUP BY brand ORDER BY total_appears DESC", (year_month,))
+            return [{'brand': r[0], 'event_count': r[1], 'total_appears': r[2]}
+                    for r in await cur.fetchall()]
 
     @staticmethod
     def compute_url_hash(url: str) -> str:

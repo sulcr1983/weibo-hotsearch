@@ -160,3 +160,25 @@ sudo cp system/services/car-monitor-v3.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now car-monitor-v3
 ```
+
+## 十、V4.0 → V4.1 更新
+
+### 微博采集重构
+- 主源从 `s.weibo.com/top/summary`（需Cookie）改为 `weibo.com/ajax/side/hotSearch`（免Cookie，无需登录）
+- 调度频率从 60 分钟降为 120 分钟，降低被封禁风险
+- 去重窗口从 30 分钟扩展到 24 小时（同品牌+同标题唯一）
+- 链接统一使用 `s.weibo.com/weibo?q=关键词`，不再依赖不可靠的 `word_scheme` 字段
+- 飞书日报微博板块含热搜标签（爆/热/新/沸）并自动去重合并
+
+### 过滤器优化
+- UGC 正则从 10 词收缩到 6 词（移除 `\d+小时前|分钟前|次阅读|万阅读` 等误杀项）
+- 观点过滤器从全局13词收缩到仅虎嗅7词，避免误杀正常汽车新闻
+
+### 日报格式升级
+- 从逐条平铺改为 品牌分组→四维度分组→40字摘要→来源+时间
+
+### 测试覆盖
+- 8 项回归测试（test_v3.py）+ 全链路集成测试（采集→入库→日报→周报→Health API）
+
+### API 变更
+- `POST /collect` 现在同时触发新闻 + 微博采集

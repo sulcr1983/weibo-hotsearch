@@ -83,8 +83,6 @@ class WebScraper:
             href = el.get('href', '').strip()
             if not title or len(title) < 5 or not href:
                 continue
-            if not any(r.search(title) for r in BRAND_REGEX.values()):
-                continue
             articles.append({
                 'title': title, 'url': urljoin(url, href),
                 'source': name, 'source_level': level,

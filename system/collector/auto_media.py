@@ -8,7 +8,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from sources import get_auto_feeds
-from v2.constants import BRAND_REGEX, FETCH_DELAY_MIN, FETCH_DELAY_MAX
+from v2.constants import FETCH_DELAY_MIN, FETCH_DELAY_MAX
 from v2.logger import get_logger
 
 logger = get_logger('auto')
@@ -57,7 +57,7 @@ class AutoScraper:
         html = await self._fetch(url)
         if not html:
             logger.warning(f"  [{name}]: HTTP失败")
-            return False, 0
+            return []
         soup = BeautifulSoup(html, 'html.parser')
         els = soup.select(article_sel)
         articles = []
@@ -67,8 +67,6 @@ class AutoScraper:
             title = el.get_text(strip=True)
             href = el.get('href', '').strip()
             if not title or len(title) < 5 or not href:
-                continue
-            if not any(r.search(title) for r in BRAND_REGEX.values()):
                 continue
             articles.append({
                 'title': title, 'url': urljoin(url, href),

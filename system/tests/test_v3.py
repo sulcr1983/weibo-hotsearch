@@ -1,4 +1,4 @@
-"""V3 回归测试 (Skill 09: 交付物自动化)"""
+"""V4.1 回归测试"""
 import sys
 sys.path.insert(0, 'system')
 
@@ -91,7 +91,7 @@ def test_templates():
 
 
 if __name__ == '__main__':
-    print('V3 回归测试')
+    print('V4.1 回归测试')
     print('=' * 50)
     tests = [
         test_imports, test_brand_match, test_financial_filter,

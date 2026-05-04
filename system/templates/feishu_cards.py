@@ -44,31 +44,24 @@ def render_daily_feishu(
     elements.append({"tag": "hr"})
 
     if weibo:
-        # 去重：同一品牌+标题只保留一条热榜最高的
-        seen = set()
-        deduped = []
-        for item in sorted(weibo, key=lambda x: x.get('rank', 0)):
-            key = (item.get('brand_group',''), item.get('title',''))
-            if key not in seen:
-                seen.add(key)
-                deduped.append(item)
         elements.append({
             "tag": "div",
             "text": {
                 "tag": "lark_md",
-                "content": f"**🔥 微博热搜 · {len(deduped)}条**"
+                "content": f"**🔥 微博热搜 · {len(weibo)}条**"
             }
         })
-        for item in deduped[:8]:
-            brand = item.get('brand_group', '')
-            title = item.get('title', '')
+        for item in weibo[:8]:
+            brand = item.get('brand', '')
+            keyword = item.get('keyword', '')
             link = item.get('link', '')
             label = item.get('label', '')
-            rank = item.get('rank', 0)
+            appear = item.get('appear_count', 1)
             brand_tag = brand_badge_feishu(brand) if brand else ''
             dc = P["danger"]
-            label_str = f'<font color="{dc}">{label}</font>' if label in ('爆','热','新','沸') else label
-            line = f"{brand_tag} [{title}]({link})"
+            label_str = f'<font color="{dc}">{label}</font>' if label in ('爆','热','新','沸','置顶') else label
+            count_hint = f' 🕐×{appear}' if appear > 1 else ''
+            line = f"{brand_tag} [{keyword}]({link}){count_hint}"
             if label_str:
                 line += f" {label_str}"
             elements.append({

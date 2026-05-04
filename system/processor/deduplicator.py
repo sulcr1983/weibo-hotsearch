@@ -1,9 +1,10 @@
-"""去重 + 事件聚类 (simhash Simhash类)"""
+"""去重 + 事件聚类 (simhash + jieba 中文分词)"""
 import hashlib
 import json
 from datetime import datetime
 from typing import List
 
+import jieba
 import simhash
 
 from v2.constants import HAMMING_THRESHOLD, EVENT_TIME_WINDOW_HOURS
@@ -15,7 +16,7 @@ logger = get_logger('dedup')
 def compute_simhash(text: str) -> str:
     if not text or not text.strip():
         return '0' * 16
-    words = [w.strip() for w in text.split() if len(w.strip()) >= 2]
+    words = [w.strip() for w in jieba.cut(text) if len(w.strip()) >= 2]
     if not words:
         words = [text[:50]]
     try:

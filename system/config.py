@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""汽车行业舆情监控 V3.0 — 全局配置 (路径锚点 + 环境变量)"""
+"""汽车行业舆情监控 V4.1 — 全局配置 (路径锚点 + 环境变量)"""
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ DB_PATH = str(PROJECT_ROOT / os.getenv('DB_PATH', 'v3_monitor.db'))
 WEIBO_DB_PATH = str(PROJECT_ROOT / os.getenv('WEIBO_DB_PATH', 'v3_weibo.db'))
 
 WEIBO_HOTSEARCH_URL = 'https://s.weibo.com/top/summary'
+#   注意：V4.1 weibo_collector 改用 weibo.com/ajax/side/hotSearch（免Cookie）
+#   WEIBO_COOKIE 已废弃，保留仅为向后兼容
 WEIBO_COOKIE = os.getenv('WEIBO_COOKIE', '')
 
 AI_API_KEY = os.getenv('AI_API_KEY', '')
