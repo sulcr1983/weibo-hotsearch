@@ -12,6 +12,21 @@ from processor.brand_matcher import strip_html
 logger = get_logger('builder')
 
 _TITLE_KW_RE = re.compile(r'[\d.]+万|元|起售|售价|万元|版|款|型')
+_BRIEF_NEWS_RE = re.compile(r'^\d{1,2}点\d{0,2}[^\s]*?丨|^《[^》]+》\d+版|^【[^】]+】')
+
+
+def _is_brief_news(title: str) -> bool:
+    """判断是否为快讯类新闻（如36氪/虎嗅早报格式）：标题含｜或时间+媒体格式"""
+    if not title:
+        return False
+    if '丨' in title or '｜' in title:
+        return True
+    if _BRIEF_NEWS_RE.match(title):
+        return True
+    segments = title.split('；')
+    if len(segments) >= 3:
+        return True
+    return False
 
 
 def _title_core(title: str) -> str:
@@ -89,18 +104,18 @@ class ReportBuilder:
         news = await self.db.get_articles(date=date, is_pushed=0)
         weibo = await self.db.get_weibo_events(date=date)
         news = _merge_by_event(news)
-        # 日报：优先 strong (score>=65)，保底取 weak 中 score 最高的补齐
-        strong = [n for n in news if n.get('score', 0) >= 65]
+        # 日报：score>=65 且有维度分类；不足则从 score>=35 补充
+        strong = [n for n in news if n.get('score', 0) >= 65 and classify_dimension(n.get('title', ''), n.get('content', '') or '')]
         strong.sort(key=lambda x: x.get('score', 0), reverse=True)
         if len(strong) < 3:
-            weak = sorted(
-                [n for n in news if n.get('score', 0) >= 35],
-                key=lambda x: x.get('score', 0), reverse=True)
-            for w in weak:
-                if w not in strong:
-                    strong.append(w)
-                if len(strong) >= 8:
-                    break
+            weak = [
+                n for n in news
+                if n.get('score', 0) >= 35
+                and classify_dimension(n.get('title', ''), n.get('content', '') or '')
+                and n not in strong
+            ]
+            weak.sort(key=lambda x: x.get('score', 0), reverse=True)
+            strong.extend(weak[:8 - len(strong)])
         for n in strong:
             clean_content = strip_html(n.get('content', '') or '')
             n['summary'] = clean_content[:40].strip()
@@ -110,8 +125,8 @@ class ReportBuilder:
         ws = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
         we = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         articles = await self.db.get_articles(hours=24 * 7)
-        # 周报：取 score>=35 的文章
-        articles = [a for a in articles if a.get('score', 0) >= 35]
+        # 周报：score>=35，排除快讯类新闻
+        articles = [a for a in articles if not _is_brief_news(a.get('title', '')) and a.get('score', 0) >= 35]
         articles = _merge_by_event(articles)
         by_brand: dict[str, dict[str, list]] = {}
         total = 0

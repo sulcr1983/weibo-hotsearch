@@ -22,12 +22,11 @@ WEIBO_HOTSEARCH_URL = 'https://s.weibo.com/top/summary'
 #   WEIBO_COOKIE 已废弃，保留仅为向后兼容
 WEIBO_COOKIE = os.getenv('WEIBO_COOKIE', '')
 
-# AI 总结生成（火山引擎 Ark / doubao-seed）
-# 注意：Ark 平台需先在控制台创建 Endpoint（接入点），模型名为 ep-xxxxxxxx-xxxxx 格式
-# 详见 https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint
-AI_API_KEY = os.getenv('AI_API_KEY', '')
-AI_API_URL = os.getenv('AI_API_URL', 'https://ark.cn-beijing.volces.com/api/v3/chat/completions')
-AI_MODEL = os.getenv('AI_MODEL', 'ep-0000000000000-xxxxx')
+# AI 总结生成（DeepSeek）
+# DeepSeek API: https://api.deepseek.com
+AI_API_KEY = os.getenv('AI_API_KEY', 'sk-eb072337b02b48d0905c2394bc48120a')
+AI_API_URL = os.getenv('AI_API_URL', 'https://api.deepseek.com/chat/completions')
+AI_MODEL = os.getenv('AI_MODEL', 'deepseek-chat')
 
 FEISHU_WEBHOOK_URL = os.getenv('FEISHU_WEBHOOK_URL', '')
 
