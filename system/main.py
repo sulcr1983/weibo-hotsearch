@@ -3,6 +3,7 @@
 import asyncio
 import gc
 import json
+import random
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -139,13 +140,16 @@ async def weibo_collect_task():
                 heat=it.get('heat', 0))
             if result['is_new']:
                 new_count += 1
-        # 收尾：3小时未出现的热搜标记为 ended
         await db.end_stale_events(hours=3)
         logger.info(f"微博: {new_count} 新事件 / {len(items)} 当前命中共 {len(items)}")
         if new_count > 0:
             logger.info(f"🔥 微博新热搜: {new_count} 条首次出现（已推送）")
     except Exception as e:
         logger.error(f"微博采集异常: {e}")
+    finally:
+        next_min = random.randint(57, 67)
+        scheduler.reschedule_job('weibo', trigger=IntervalTrigger(minutes=next_min))
+        logger.info(f"微博下次采集: {next_min} 分钟后")
 
 
 async def daily_report():
@@ -234,13 +238,14 @@ async def lifespan(app: FastAPI):
         logger.info("[V4.1] Database started")
 
     scheduler.add_job(news_collect, IntervalTrigger(hours=1), id='news', replace_existing=True)
-    scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=120), id='weibo', replace_existing=True)
+    first_weibo_min = random.randint(57, 67)
+    scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=first_weibo_min), id='weibo', replace_existing=True)
     scheduler.add_job(daily_report, CronTrigger(hour=9, minute=0), id='daily', replace_existing=True)
     scheduler.add_job(weekly_report, CronTrigger(day_of_week='mon', hour=8, minute=0), id='weekly', replace_existing=True)
     scheduler.add_job(monthly_report, CronTrigger(day=1, hour=8, minute=0), id='monthly', replace_existing=True)
     scheduler.add_job(clean_task, CronTrigger(hour=9, minute=5), id='clean', replace_existing=True)
     scheduler.start()
-    logger.info("[V4.0] Scheduler: 新闻/60m, 微博/60m, 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
+    logger.info("[V4.1] Scheduler: 新闻/60m, 微博/57~67m(随机), 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
 
     asyncio.create_task(news_collect())
     asyncio.create_task(weibo_collect_task())

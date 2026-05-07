@@ -1,11 +1,35 @@
 """飞书卡片模板 v2 — 优化视觉层级，去除空格缩进，利用原生元素"""
+import re
 from typing import List
+from urllib.parse import quote
 
 from templates.design_tokens import (
     PALETTE, brand_badge_feishu, brand_color, DIMENSION_ICONS,
 )
 from processor.brand_matcher import strip_html
 from v2.constants import BRAND_PATTERNS
+
+_VALID_URL_RE = re.compile(r'^https?://(?!.*mock)(?!.*localhost)[^\s]+$')
+_SAFE_CHARS = ':/?#[]@!$&\'()*+,;=%'
+
+
+def _encode_url(url: str) -> str:
+    """URL编码含中文/特殊字符的链接，防止飞书lark_md解析失败"""
+    if not url:
+        return ''
+    try:
+        return quote(url, safe=_SAFE_CHARS)
+    except Exception:
+        return url
+
+
+def _valid_url(url: str) -> str:
+    if not url:
+        return ''
+    clean = url.strip()
+    if not _VALID_URL_RE.match(clean):
+        return ''
+    return _encode_url(clean)
 
 
 def render_daily_feishu(
@@ -54,15 +78,19 @@ def render_daily_feishu(
         for item in weibo[:8]:
             brand = item.get('brand', '')
             keyword = item.get('keyword', '')
-            link = item.get('link', '')
+            raw_link = item.get('link', '')
+            link = _valid_url(raw_link)
             label = item.get('label', '')
             appear = item.get('appear_count', 1)
             brand_tag = brand_badge_feishu(brand) if brand else ''
             label_str = f'<font color="#FF4D4F">{label}</font>' if label in ('爆','热','新','沸','置顶') else label
             count_hint = f' 🕐×{appear}' if appear > 1 else ''
-            line = f"{brand_tag} [{keyword}]({link}){count_hint}"
+            if link:
+                line = f"{brand_tag} **{keyword}** [🔗]({link}){count_hint}"
+            else:
+                line = f"{brand_tag} **{keyword}**{count_hint}"
             if label_str:
-                line += f" {label_str}"
+                line += f' {label_str}'
             elements.append({
                 "tag": "div",
                 "text": {"tag": "lark_md", "content": line}
@@ -116,7 +144,7 @@ def render_daily_feishu(
                 })
                 for item in items:
                     title = item.get('title', '')
-                    url = item.get('url', '')
+                    url = _valid_url(item.get('url', ''))
                     source = item.get('source', '')
                     time_part = item.get('created_at', '')[:16] if item.get('created_at') else ''
                     summary = item.get('summary', '')
@@ -167,7 +195,7 @@ def render_monthly_feishu(report: dict) -> List[dict]:
     elements: List[dict] = []
     label = report.get('label', '')
     brands = report.get('brands', [])
-    total = report.get('total_mentions', 0)
+    total = report.get('total_appears', 0)
     ai = report.get('ai_summary', '')
 
     elements.append({
@@ -191,10 +219,10 @@ def render_monthly_feishu(report: dict) -> List[dict]:
 
     for i, b in enumerate(brands):
         bc = brand_color(b['brand'])
-        bar = '█' * min(b['count'], 30)
+        bar = '█' * min(b.get('total_appears', b.get('count', 0)), 30)
         elements.append({
             "tag": "div",
-            "text": {"tag": "lark_md", "content": f"**{i + 1}.** <font color=\"{bc}\">**{b['brand']}**</font>  {bar} **{b['count']}次**"}
+            "text": {"tag": "lark_md", "content": f"**{i + 1}.** <font color=\"{bc}\">**{b['brand']}**</font>  {bar} **{b.get('total_appears', b.get('count', 0))}次**"}
         })
 
     elements.append({"tag": "hr"})
@@ -205,12 +233,12 @@ def render_monthly_feishu(report: dict) -> List[dict]:
 
     for b in brands:
         bc = brand_color(b['brand'])
-        items = b.get('items', [])
+        items = b.get('keywords', b.get('items', []))
         if not items:
             continue
         kw_list = '  '.join(
-            f"<font color=\"{P['text_primary']}\">{it['title']}</font>"
-            f"<font color=\"{P['text_tertiary']}\">({(it.get('date','') or '')[-5:]})</font>"
+            f"<font color=\"{P['text_primary']}\">{it.get('keyword', it.get('title', ''))}</font>"
+            f"<font color=\"{P['text_tertiary']}\">({(it.get('duration','') or it.get('date','') or '')[-5:]})</font>"
             for it in items[:12]
         )
         elements.append({
@@ -322,7 +350,8 @@ def render_weekly_feishu(
             for item in items:
                 brand_num += 1
                 title = item.get('title', '')
-                url = item.get('url', '') or (item.get('urls', [''])[0] if item.get('urls') else '')
+                raw_url = item.get('url', '') or (item.get('urls', [''])[0] if item.get('urls') else '')
+                url = _valid_url(raw_url)
                 summary = item.get('summary', '')
                 source = item.get('source', '')
                 created = item.get('created_at', '')[:16]

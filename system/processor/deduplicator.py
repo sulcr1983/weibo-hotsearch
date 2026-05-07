@@ -28,10 +28,6 @@ def compute_simhash(text: str) -> str:
 
 def hamming_dist(h1: str, h2: str) -> int:
     try:
-        return simhash.Simhash(0).distance(simhash.Simhash(0))
-    except Exception:
-        pass
-    try:
         v1 = int(h1, 16)
         v2 = int(h2, 16)
         return bin(v1 ^ v2).count('1')

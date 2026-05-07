@@ -185,9 +185,13 @@ class Database:
             cur = await db.execute('SELECT 1 FROM articles WHERE url_hash=? LIMIT 1', (url_hash,))
             return await cur.fetchone() is not None
 
-    async def get_articles(self, brand: str = None, hours: int = 24, is_pushed: int = None, limit: int = 100) -> List[dict]:
-        cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
-        conds, params = ['created_at>=?'], [cutoff]
+    async def get_articles(self, brand: str = None, hours: int = 24, is_pushed: int = None, limit: int = 100, date: str = None) -> List[dict]:
+        conds, params = [], []
+        if date:
+            conds.append("date(created_at) = ?"); params.append(date)
+        else:
+            cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+            conds.append('created_at>=?'); params.append(cutoff)
         if brand:
             conds.append('brand=?'); params.append(brand)
         if is_pushed is not None:
@@ -240,11 +244,14 @@ class Database:
             if cur.rowcount:
                 logger.info(f"微博事件收尾: {cur.rowcount} 条标记为 ended")
 
-    async def get_weibo_events(self, hours: int = 24, status: str = None, limit: int = 200) -> List[dict]:
+    async def get_weibo_events(self, hours: int = 24, status: str = None, limit: int = 200, date: str = None) -> List[dict]:
         """获取微博热搜事件列表"""
         conds = []
         params = []
-        if hours:
+        if date:
+            conds.append("date(first_seen_at) = ?")
+            params.append(date)
+        elif hours:
             cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
             conds.append('first_seen_at>=?')
             params.append(cutoff)

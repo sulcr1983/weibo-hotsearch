@@ -1,4 +1,4 @@
-"""AI总结生成器 (火山引擎 GLM-4-Flash)"""
+"""AI总结生成器 (火山引擎 Ark / doubao-seed)"""
 import aiohttp
 
 from v2.logger import get_logger
@@ -42,9 +42,10 @@ async def monthly_summary(api_key: str, api_url: str, model: str, report: dict) 
         return ''
     parts = []
     for b in report.get('brands', []):
-        kwds = [it['title'] for it in b.get('items', [])[:5]]
+        kwds = [it.get('keyword', it.get('title', '')) for it in b.get('keywords', b.get('items', []))[:5]]
         if kwds:
-            parts.append(f"{b['brand']}({b['count']}次): {'; '.join(kwds)}")
+            appears = b.get('total_appears', b.get('count', 0))
+            parts.append(f"{b['brand']}(出现{appears}次): {'; '.join(kwds)}")
     prompt = (
         f"你是汽车行业专业分析师。以下是{report.get('label','上个月')}"
         f"微博热搜中 10 个汽车品牌的出现情况。\n"

@@ -25,3 +25,11 @@ ENV/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 临时脚本（以_开头）
+_*.py
+
+# 工具目录中的临时输出
+system/tools/*.html
+system/tools/*.json
+system/tools/*.png

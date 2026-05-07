@@ -16,7 +16,7 @@ def get_logger(name: str = 'car_monitor') -> logging.Logger:
             LOG_FILE,
             when='midnight',
             interval=1,
-            backupCount=30,
+            backupCount=8,
             encoding='utf-8'
         )
         handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))

@@ -86,8 +86,8 @@ class ReportBuilder:
 
     async def build_daily(self) -> dict:
         date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-        news = await self.db.get_articles(hours=24, is_pushed=0)
-        weibo = await self.db.get_weibo_events(hours=24)
+        news = await self.db.get_articles(date=date, is_pushed=0)
+        weibo = await self.db.get_weibo_events(date=date)
         news = _merge_by_event(news)
         # 日报：优先 strong (score>=65)，保底取 weak 中 score 最高的补齐
         strong = [n for n in news if n.get('score', 0) >= 65]
