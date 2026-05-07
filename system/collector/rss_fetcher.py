@@ -76,7 +76,14 @@ class RssFetcher:
             logger.warning(f"RSS 失败: {name}")
             return []
         feed = feedparser.parse(html)
-        if feed.bozo and not feed.entries:
+        if feed.bozo:
+            bozo_msg = str(getattr(feed, 'bozo_exception', 'unknown parsing error'))
+            if not feed.entries:
+                logger.warning(f"RSS解析失败 [{name}]: {bozo_msg[:100]}")
+                return []
+            logger.warning(f"RSS部分解析 [{name}]: bozo={bozo_msg[:80]}, entries={len(feed.entries)}")
+        if not feed.entries:
+            logger.warning(f"RSS无条目 [{name}]: URL可能失效或内容为空")
             return []
         articles = []
         for entry in feed.entries:

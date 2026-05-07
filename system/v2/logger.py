@@ -1,9 +1,25 @@
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
 
 from config import LOG_DIR
 
 LOG_FILE = str(LOG_DIR / 'monitor.log')
+
+
+class WindowsSafeRotatingHandler(TimedRotatingFileHandler):
+    """Windows 兼容的日志轮转处理器：处理 PermissionError"""
+    def doRollover(self):
+        if not os.path.exists(self.baseFilename):
+            # 避免 Windows 下因文件被占用导致的轮转失败
+            self.stream = None
+            TimedRotatingFileHandler.doRollover(self)
+            return
+        try:
+            TimedRotatingFileHandler.doRollover(self)
+        except (PermissionError, OSError):
+            # Windows 文件锁冲突时跳过轮转，继续写入当前文件
+            self.stream = self._open()
 
 
 def get_logger(name: str = 'car_monitor') -> logging.Logger:
@@ -12,7 +28,7 @@ def get_logger(name: str = 'car_monitor') -> logging.Logger:
     logger.propagate = False
 
     if not logger.handlers:
-        handler = TimedRotatingFileHandler(
+        handler = WindowsSafeRotatingHandler(
             LOG_FILE,
             when='midnight',
             interval=1,

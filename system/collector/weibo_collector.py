@@ -13,14 +13,14 @@ SIDE_API = 'https://weibo.com/ajax/side/hotSearch'
 
 # 品牌别名字典 (主品牌名 → [匹配关键词])
 BRAND_DICT: Dict[str, list] = {
-    "小米汽车": ["小米SU7", "小米YU7"],
-    "鸿蒙智行": ["问界", "智界", "尊界", "享界", "尚界"],
-    "零跑汽车": ["零跑", "零跑C"],
-    "理想汽车": ["理想L", "理想MEGA", "理想i", "理想ONE"],
-    "蔚来汽车": ["蔚来", "萤火虫", "乐道"],
-    "极氪汽车": ["极氪", "极氪00"],
+    "小米汽车": ["小米汽车", "小米SU7", "小米YU7"],
+    "鸿蒙智行": ["鸿蒙智行", "问界", "智界", "尊界", "享界", "尚界"],
+    "零跑汽车": ["零跑汽车", "零跑", "零跑C"],
+    "理想汽车": ["理想汽车", "理想L", "理想MEGA", "理想i", "理想ONE"],
+    "蔚来汽车": ["蔚来汽车", "蔚来", "萤火虫", "乐道"],
+    "极氪汽车": ["极氪汽车", "极氪", "极氪00"],
     "阿维塔": ["阿维塔"],
-    "智己汽车": ["智己", "智己L"],
+    "智己汽车": ["智己汽车", "智己", "智己L"],
     "比亚迪": ["比亚迪", "仰望", "腾势", "方程豹"],
     "特斯拉": ["特斯拉", "Tesla", "Model Y", "Model 3"],
 }
@@ -29,11 +29,39 @@ SIMHASH_THRESHOLD = 15
 
 
 def _match_brand(text: str) -> Optional[str]:
-    """别名字典匹配：遍历所有品牌的所有别名，返回首次命中的品牌名"""
+    """别名字典匹配：精确匹配品牌关键词，优先匹配更长的词"""
+    import re
     for brand, aliases in BRAND_DICT.items():
-        for alias in aliases:
-            if alias in text:
-                return brand
+        # 按长度排序，优先匹配更长的关键词
+        sorted_aliases = sorted(aliases, key=lambda x: -len(x))
+        for alias in sorted_aliases:
+            # 如果是完整品牌名（如"小米汽车"），简单包含匹配
+            if alias == brand:
+                if alias in text:
+                    return brand
+            # 如果是型号（以字母结尾，如"理想L"、"零跑C"、"Model Y"）
+            elif len(alias) >= 2 and re.search(r'[A-Za-z]$', alias):
+                pattern = re.compile(re.escape(alias) + r'(?:[a-zA-Z0-9]*(?:[^a-zA-Z0-9]|$))')
+                if pattern.search(text):
+                    return brand
+            # 如果是型号（以数字结尾但前面有字母，如"小米SU7"、"理想MEGA"）
+            elif len(alias) >= 3 and re.search(r'[A-Za-z].*[0-9]$', alias):
+                # 允许后面跟字母数字（如"小米SU7Ultra"）
+                pattern = re.compile(re.escape(alias) + r'(?:[a-zA-Z0-9]*(?:[^a-zA-Z0-9]|$))')
+                if pattern.search(text):
+                    return brand
+            # 如果是纯数字结尾的型号（如"极氪00"），后面可以跟数字或结束
+            elif len(alias) >= 2 and re.search(r'[0-9]$', alias):
+                pattern = re.compile(re.escape(alias) + r'(?:[0-9]*(?:[^a-zA-Z0-9]|$))')
+                if pattern.search(text):
+                    return brand
+            # 子品牌（如"问界"、"乐道"、"仰望"），简单包含匹配但避免部分匹配
+            else:
+                # 前面可以是非字母数字或中文边界，后面可以是字母数字或边界
+                # 允许"三问享界S9"这样的情况
+                pattern = re.compile(r'(?:^|[\s#@【】《》，。！？、]|(?<=[\u4e00-\u9fff]))' + re.escape(alias) + r'(?:[a-zA-Z0-9]*[^a-zA-Z0-9]|$)')
+                if pattern.search(text):
+                    return brand
     return None
 
 

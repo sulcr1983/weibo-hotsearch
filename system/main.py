@@ -7,6 +7,7 @@ import random
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from fastapi import FastAPI
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -24,12 +25,17 @@ from collector.rss_fetcher import RssFetcher
 from collector.web_scraper import WebScraper
 from collector.weibo_collector import collect as weibo_collect
 from collector.auto_media import AutoScraper
+from collector.playwright_scraper import PlaywrightScraper
 from processor.brand_matcher import match_brand, strip_html, is_financial_brief, is_digest, is_ugc, is_opinion
 from processor.scoring import calc_article_score, score_tier
 from processor.keyworder import extract_keywords
 from processor.deduplicator import compute_simhash, cluster_article
 from processor.classifier import classify_dimension
 from processor.llm_classifier import classify_with_llm
+from processor.observability import (
+    new_trace_id, get_funnel, DropReason,
+    log_trace, check_html_validity, save_fail_snapshot,
+)
 from reporter.builder import ReportBuilder
 from reporter.feishu import send_daily as feishu_daily, send_weekly as feishu_weekly, send_monthly as feishu_monthly
 from reporter.emailer import Emailer
@@ -42,6 +48,7 @@ db = Database(DB_PATH, WEIBO_DB_PATH)
 rss = RssFetcher()
 web = WebScraper()
 auto = AutoScraper()
+pw = PlaywrightScraper()
 health = SourceHealth(db)
 builder = ReportBuilder(db)
 emailer = Emailer(EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECIPIENTS, SMTP_SERVER, SMTP_PORT)
@@ -59,33 +66,71 @@ async def get_weibo_session():
 
 async def news_collect():
     logger.info(f"📥 新闻采集: {datetime.now().strftime('%H:%M')}")
+    funnel = get_funnel()
+    funnel.reset()
     try:
         rss_items = await rss.fetch_all()
-        health.record_rss('RSS聚合', len(rss_items))
         web_items = await web.scrape_all()
-        health.record_web('Web抓取', len(web_items))
         auto_items = await auto.scrape_all()
+        pw_items = await pw.scrape_all()
+        # 源级别统计 — 从各采集器获取实际源数量
+        from v2.constants import RSS_FEEDS, WEB_FEEDS
+        from sources import get_auto_feeds, get_playwright_feeds
+        _auto_feeds = get_auto_feeds()
+        _playwright_feeds = get_playwright_feeds()
+        funnel.rss_sources = len(RSS_FEEDS)
+        funnel.web_sources = len(WEB_FEEDS)
+        funnel.auto_sources = len(_auto_feeds)
+        funnel.pw_sources = len(_playwright_feeds)
+        funnel.rss_success = funnel.rss_sources if rss_items else 0
+        funnel.web_success = funnel.web_sources if web_items else 0
+        funnel.auto_success = funnel.auto_sources if auto_items else 0
+        funnel.pw_success = funnel.pw_sources if pw_items else 0
+
+        health.record_rss('RSS聚合', len(rss_items))
+        health.record_web('Web抓取', len(web_items))
         health.record_auto('汽车垂媒', len(auto_items))
-        all_items = rss_items + web_items + auto_items
-        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)} = {len(all_items)}")
+        all_items = rss_items + web_items + auto_items + pw_items
+        funnel.raw_captured = len(all_items)
+        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)} + PW {len(pw_items)} = {len(all_items)}")
         enriched = 0
         for raw in all_items:
+            tid = new_trace_id()
             try:
                 if not isinstance(raw, dict):
+                    funnel.count_drop(DropReason.INVALID_DATA)
+                    log_trace(tid, '[RAW_FAIL]', '非dict数据')
                     continue
                 title = raw.get('title', '').strip()
                 content_raw = raw.get('content', '') or raw.get('rss_summary', '')
                 content = strip_html(content_raw)
+                log_trace(tid, '[RAW]', title)
+
                 brand, _ = match_brand(title, content)
                 if not brand:
+                    funnel.count_drop(DropReason.NO_BRAND_MATCH)
+                    log_trace(tid, '[BRAND_FAIL]', title, 'no_brand_match')
                     continue
+                funnel.brand_hit += 1
+                log_trace(tid, '[BRAND]', title, brand)
+
                 if is_digest(title):
+                    funnel.count_drop(DropReason.DIGEST)
+                    funnel.digest_filtered += 1
+                    log_trace(tid, '[FILTER:DIGEST]', title)
                     continue
                 if is_ugc(title):
+                    funnel.count_drop(DropReason.UGC)
+                    funnel.ugc_filtered += 1
+                    log_trace(tid, '[FILTER:UGC]', title)
                     continue
                 if is_opinion(title, raw.get('source', '')):
+                    funnel.count_drop(DropReason.OPINION)
+                    funnel.opinion_filtered += 1
+                    log_trace(tid, '[FILTER:OPINION]', title)
                     continue
-                # 评分：品牌命中位置 + 来源权重 + 强信号 + 噪音惩罚 + 标题质量
+
+                # 评分
                 title_hit = match_brand(title, '')[0] is not None
                 score_info = calc_article_score(
                     title, content, raw.get('source', ''),
@@ -93,17 +138,36 @@ async def news_collect():
                     source_level=raw.get('source_level', 3))
                 tier = score_tier(score_info['score'])
                 if tier == 'discard':
+                    funnel.count_drop(DropReason.SCORE_DISCARD)
+                    funnel.score_discarded += 1
+                    log_trace(tid, '[FILTER:SCORE]', title, f'score={score_info["score"]}')
                     continue
+
+                # 维度分类
                 dim = classify_dimension(title, content)
                 if not dim:
+                    log_trace(tid, '[CLASSIFY:LLM]', title)
                     dim = await classify_with_llm(title, content, AI_API_KEY, AI_API_URL, AI_MODEL)
-                if not dim:
-                    continue
+                    if not dim:
+                        funnel.count_drop(DropReason.NO_DIMENSION)
+                        log_trace(tid, '[FILTER:NO_DIM]', title)
+                        continue
+                funnel.dimension_pass += 1
+                log_trace(tid, '[CLASSIFY]', title, dim)
+
                 if is_financial_brief(title, content):
+                    funnel.count_drop(DropReason.FINANCIAL_BRIEF)
+                    funnel.financial_filtered += 1
+                    log_trace(tid, '[FILTER:FINANCIAL]', title)
                     continue
+
                 uh = db.compute_url_hash(raw['url'])
                 if await db.article_exists(uh):
+                    funnel.count_drop(DropReason.DUPLICATE)
+                    funnel.dedup_filtered += 1
+                    log_trace(tid, '[FILTER:DEDUP]', title, 'url_exists')
                     continue
+
                 kws = extract_keywords(title + ' ' + content)
                 sh = compute_simhash(title[:200] + ' ' + content[:300])
                 art_time = raw.get('published') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -119,12 +183,19 @@ async def news_collect():
                 eid = await cluster_article(article, db)
                 article['event_id'] = eid
                 db.enqueue('insert_article', article)
+                funnel.db_inserted += 1
                 enriched += 1
+                log_trace(tid, '[DB]', title, f'score={score_info["score"]} tier={tier}')
             except Exception as e:
+                funnel.count_drop(DropReason.PARSE_FAILED)
+                funnel.errors += 1
+                log_trace(tid, '[ERROR]', str(e)[:100])
                 logger.error(f"处理失败: {e}")
         logger.info(f"📥 入库 {enriched} 条")
+        funnel.log_report()
     except Exception as e:
         logger.error(f"采集异常: {e}")
+        funnel.errors += 1
 
 
 async def weibo_collect_task():
@@ -141,14 +212,24 @@ async def weibo_collect_task():
             if result['is_new']:
                 new_count += 1
         await db.end_stale_events(hours=3)
-        logger.info(f"微博: {new_count} 新事件 / {len(items)} 当前命中共 {len(items)}")
-        if new_count > 0:
-            logger.info(f"🔥 微博新热搜: {new_count} 条首次出现（已推送）")
+        if len(items) == 0:
+            logger.info(f"微博热搜: 本轮无汽车品牌上榜（51条热搜中0条命中，正常现象）")
+        else:
+            logger.info(f"微博热搜: {new_count} 新事件 / {len(items)} 命中")
+            if new_count > 0:
+                logger.info(f"🔥 微博新热搜: {new_count} 条首次出现（已推送）")
     except Exception as e:
         logger.error(f"微博采集异常: {e}")
     finally:
         next_min = random.randint(57, 67)
-        scheduler.reschedule_job('weibo', trigger=IntervalTrigger(minutes=next_min))
+        try:
+            scheduler.reschedule_job('weibo', trigger=IntervalTrigger(minutes=next_min))
+        except Exception:
+            try:
+                scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=next_min), id='weibo',
+                                  max_instances=1, coalesce=True, replace_existing=True)
+            except Exception:
+                pass
         logger.info(f"微博下次采集: {next_min} 分钟后")
 
 
@@ -194,8 +275,9 @@ async def clean_task():
 
 
 def _startup_check() -> bool:
-    """启动自检：验证运行时关键依赖可用"""
+    """启动自检：验证运行时关键依赖可用 + 关键环境变量"""
     failed = []
+    # 1. 依赖检查
     for name, import_path in [
         ('aiohttp', 'aiohttp'),
         ('aiosqlite', 'aiosqlite'),
@@ -214,6 +296,27 @@ def _startup_check() -> bool:
         except ImportError:
             logger.error(f"  缺少依赖: {name} (pip install {import_path})")
             failed.append(name)
+
+    # 2. 关键环境变量检查
+    env_warnings = []
+    if not AI_API_KEY:
+        env_warnings.append('AI_API_KEY (AI总结将不可用)')
+    if not FEISHU_WEBHOOK_URL:
+        env_warnings.append('FEISHU_WEBHOOK_URL (飞书推送将不可用)')
+    if not EMAIL_SENDER:
+        env_warnings.append('EMAIL_SENDER (邮件推送将不可用)')
+    if env_warnings:
+        logger.warning(f"缺少可选环境变量: {', '.join(env_warnings)}")
+
+    # 3. 数据库路径检查
+    from config import PROJECT_ROOT
+    db_dir = Path(DB_PATH).parent
+    if not db_dir.exists():
+        try:
+            db_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"无法创建数据库目录 {db_dir}: {e}")
+
     if failed:
         logger.error(f"启动自检: {len(failed)} 项失败 - {', '.join(failed)}")
         return False
@@ -223,7 +326,7 @@ def _startup_check() -> bool:
         jieba.initialize()
     except Exception:
         pass
-    logger.info(f"启动自检: 所有依赖可用 ({len(failed)} 失败)")
+    logger.info(f"启动自检: 所有依赖可用 (0 失败) | 环境警告: {len(env_warnings)}")
     return len(failed) == 0
 
 
@@ -237,13 +340,19 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("[V4.1] Database started")
 
-    scheduler.add_job(news_collect, IntervalTrigger(hours=1), id='news', replace_existing=True)
+    scheduler.add_job(news_collect, IntervalTrigger(hours=1), id='news',
+                      replace_existing=True, max_instances=1, coalesce=True)
     first_weibo_min = random.randint(57, 67)
-    scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=first_weibo_min), id='weibo', replace_existing=True)
-    scheduler.add_job(daily_report, CronTrigger(hour=9, minute=0), id='daily', replace_existing=True)
-    scheduler.add_job(weekly_report, CronTrigger(day_of_week='mon', hour=8, minute=0), id='weekly', replace_existing=True)
-    scheduler.add_job(monthly_report, CronTrigger(day=1, hour=8, minute=0), id='monthly', replace_existing=True)
-    scheduler.add_job(clean_task, CronTrigger(hour=9, minute=5), id='clean', replace_existing=True)
+    scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=first_weibo_min), id='weibo',
+                      replace_existing=True, max_instances=1, coalesce=True)
+    scheduler.add_job(daily_report, CronTrigger(hour=9, minute=0), id='daily',
+                      replace_existing=True, max_instances=1, coalesce=True)
+    scheduler.add_job(weekly_report, CronTrigger(day_of_week='mon', hour=8, minute=0), id='weekly',
+                      replace_existing=True, max_instances=1, coalesce=True)
+    scheduler.add_job(monthly_report, CronTrigger(day=1, hour=8, minute=0), id='monthly',
+                      replace_existing=True, max_instances=1, coalesce=True)
+    scheduler.add_job(clean_task, CronTrigger(hour=9, minute=5), id='clean',
+                      replace_existing=True, max_instances=1, coalesce=True)
     scheduler.start()
     logger.info("[V4.1] Scheduler: 新闻/60m, 微博/57~67m(随机), 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
 

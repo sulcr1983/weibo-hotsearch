@@ -11,7 +11,10 @@ _CLUSTER_KW_RE = re.compile(r'[\d.]+%|\d+\.\d+%|涨|跌|涨超|跌超')
 
 for kws in BRAND_PATTERNS.values():
     for kw in kws:
-        jieba.add_word(kw)
+        try:
+            jieba.add_word(kw, freq=99999)
+        except Exception:
+            pass
 
 
 def extract_keywords(text: str, top_k: int = 10) -> List[str]:

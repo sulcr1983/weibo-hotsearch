@@ -1,4 +1,4 @@
-"""汽车垂媒采集器（V4.0）：汽车之家/懂车帝/爱卡汽车/易车网"""
+"""汽车垂媒采集器（V4.0）：汽车之家/懂车帝/爱卡汽车/易车网 + HTML有效性断言"""
 import asyncio
 import random
 from typing import List, Optional
@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from sources import get_auto_feeds
 from v2.constants import FETCH_DELAY_MIN, FETCH_DELAY_MAX
 from v2.logger import get_logger
+from processor.observability import check_html_validity, save_fail_snapshot
 
 logger = get_logger('auto')
 
@@ -58,6 +59,13 @@ class AutoScraper:
         if not html:
             logger.warning(f"  [{name}]: HTTP失败")
             return []
+        # HTML有效性断言
+        check = check_html_validity(html, name)
+        if not check['valid']:
+            logger.warning(f"⚠️ [{name}] HTML异常: {check['issues']}")
+            save_fail_snapshot(html, name, ','.join(check['issues']))
+            if check.get('issue_type') in ('captcha_page', 'forbidden_page'):
+                return []
         soup = BeautifulSoup(html, 'html.parser')
         els = soup.select(article_sel)
         articles = []
@@ -65,8 +73,19 @@ class AutoScraper:
             if len(articles) >= max_n:
                 break
             title = el.get_text(strip=True)
+            # 嵌套元素文字可能分散在子节点中，尝试多种提取方式
+            if not title or len(title) < 4:
+                title = el.get('title', '').strip() or el.get('aria-label', '').strip()
+            # 对于全站链接，可能需要从子元素中查找标题
+            if not title or len(title) < 4:
+                for child_sel in ['span', 'p', 'h3', 'h4', 'div[class*="title"]', 'div[class*="text"]']:
+                    child = el.select_one(child_sel)
+                    if child:
+                        title = child.get_text(strip=True)
+                        if len(title) >= 4:
+                            break
             href = el.get('href', '').strip()
-            if not title or len(title) < 5 or not href:
+            if not title or len(title) < 4 or not href:
                 continue
             articles.append({
                 'title': title, 'url': urljoin(url, href),

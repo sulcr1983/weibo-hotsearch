@@ -1,6 +1,8 @@
-"""网页抓取器：7个HTML/API源，品牌初筛"""
+"""网页抓取器：HTML/API源 + JSONP支持 + HTML有效性断言"""
 import asyncio
+import json
 import random
+import re
 from typing import List, Optional
 from urllib.parse import urljoin
 
@@ -9,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from v2.constants import WEB_FEEDS, BRAND_REGEX, FETCH_DELAY_MIN, FETCH_DELAY_MAX
 from v2.logger import get_logger
+from processor.observability import check_html_validity, save_fail_snapshot
 
 logger = get_logger('scraper')
 
@@ -72,6 +75,13 @@ class WebScraper:
         html = await self._fetch(url, no_ssl=no_ssl)
         if not html:
             return []
+        # HTML有效性断言
+        check = check_html_validity(html, name)
+        if not check['valid']:
+            logger.warning(f"⚠️ [{name}] HTML异常: {check['issues']}")
+            save_fail_snapshot(html, name, ','.join(check['issues']))
+            if check.get('issue_type') in ('captcha_page', 'forbidden_page'):
+                return []  # 严重页面异常，跳过此源
         soup = BeautifulSoup(html, 'html.parser')
         els = soup.select(article_sel)
         logger.info(f"  匹配 {len(els)} 个元素")
@@ -96,34 +106,59 @@ class WebScraper:
         url = cfg['url']
         level = cfg.get('level', 3)
         api = cfg.get('api_config', {})
+        jsonp_key = api.get('jsonp', '')
         session = await self._get_session()
         try:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     return []
-                data = await resp.json()
+                raw_text = await resp.text()
         except Exception as e:
             logger.error(f"API失败 [{name}]: {e}")
             return []
+        # 处理 JSONP 包装（如央视: news({...})）
+        if jsonp_key:
+            import re
+            m = re.search(re.escape(jsonp_key) + r'\s*\(\s*(.*?)\s*\)\s*$', raw_text, re.DOTALL)
+            if m:
+                raw_text = m.group(1)
+        try:
+            data = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            logger.error(f"API JSON解析失败 [{name}]: {e}")
+            return []
         items = data
-        for key in api.get('item_path', '').split('.'):
-            items = items.get(key, []) if isinstance(items, dict) else items
+        item_path = api.get('item_path', '')
+        # _ 表示根级就是列表
+        if item_path and item_path != '_':
+            for key in item_path.split('.'):
+                items = items.get(key, []) if isinstance(items, dict) else items
         if not isinstance(items, list):
             return []
         tk = api.get('title_key', 'title')
         lk = api.get('link_key', 'url')
+        sk = api.get('summary_key', '')
+        link_prefix = api.get('link_prefix', '')
+        link_suffix = api.get('link_suffix', '')
         articles = []
         for it in items:
             title = it.get(tk, '').strip()
-            link = it.get(lk, '').strip()
+            link = str(it.get(lk, '')).strip()
             if not title or not link:
                 continue
-            if not any(r.search(title) for r in BRAND_REGEX.values()):
+            if link_prefix or link_suffix:
+                link = f'{link_prefix}{link}{link_suffix}'
+            # 品牌和汽车关键词初筛
+            search_text = title
+            if sk and it.get(sk):
+                search_text += ' ' + str(it.get(sk, ''))
+            if not any(r.search(search_text) for r in BRAND_REGEX.values()):
                 continue
+            summary = str(it.get(sk, ''))[:200] if sk and it.get(sk) else ''
             articles.append({
                 'title': title, 'url': link,
                 'source': name, 'source_level': level,
-                'rss_summary': '',
+                'rss_summary': summary,
             })
         logger.info(f"  [{name}]: {len(items)}条->命中{len(articles)}条")
         return articles

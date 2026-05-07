@@ -11,10 +11,11 @@ _SOURCES_FILE = _CONF_DIR / 'sources.yml'
 _rss_feeds: List[dict] = []
 _web_feeds: List[dict] = []
 _auto_feeds: List[dict] = []
+_playwright_feeds: List[dict] = []
 
 
 def _load():
-    global _rss_feeds, _web_feeds, _auto_feeds
+    global _rss_feeds, _web_feeds, _auto_feeds, _playwright_feeds
     if _rss_feeds:
         return
     if not _SOURCES_FILE.exists():
@@ -32,6 +33,8 @@ def _load():
         _web_feeds.append(item)
     for item in data.get('auto_feeds', []):
         _auto_feeds.append(item)
+    for item in data.get('playwright_feeds', []):
+        _playwright_feeds.append(item)
 
 
 def get_rss_feeds() -> List[dict]:
@@ -47,3 +50,8 @@ def get_web_feeds() -> List[dict]:
 def get_auto_feeds() -> List[dict]:
     _load()
     return _auto_feeds
+
+
+def get_playwright_feeds() -> List[dict]:
+    _load()
+    return _playwright_feeds

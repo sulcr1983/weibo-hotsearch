@@ -170,7 +170,13 @@ class Database:
         try:
             self._queue.put_nowait({'op': op, 'data': data})
         except asyncio.QueueFull:
-            logger.warning("写入队列满，丢弃")
+            # 队列满时丢弃旧数据，写入新数据（保留最新）
+            logger.warning("⚠️ 写入队列满(maxsize=500)，丢弃最旧条目以容纳新数据")
+            try:
+                self._queue.get_nowait()
+                self._queue.put_nowait({'op': op, 'data': data})
+            except (asyncio.QueueFull, asyncio.QueueEmpty):
+                logger.error("⚠️ 队列恢复失败，数据丢失: %s", op)
 
     def update_event(self, event_id: str, brand: str, title: str,
                      source: str = '', keywords: str = None):

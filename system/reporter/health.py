@@ -62,16 +62,23 @@ class SourceHealth:
         }
 
     async def db_stats(self) -> dict:
-        """从 DB 统计实际入库的品牌分布"""
+        """从 DB 统计实际入库的品牌分布 + 队列状态"""
+        result = {'articles_24h': 0, 'by_brand': [], 'queue_size': 0, 'queue_maxsize': 500}
         try:
             async with aiosqlite.connect(self.db.db_path) as c:
                 c.row_factory = aiosqlite.Row
                 cur = await c.execute("SELECT brand, COUNT(*) as cnt FROM articles WHERE created_at >= ? GROUP BY brand ORDER BY cnt DESC",
                                       ((datetime.now() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S'),))
                 rows = await cur.fetchall()
-                return {
-                    'articles_24h': sum(r['cnt'] for r in rows),
-                    'by_brand': [{'brand': r['brand'], 'count': r['cnt']} for r in rows],
-                }
+                result['articles_24h'] = sum(r['cnt'] for r in rows)
+                result['by_brand'] = [{'brand': r['brand'], 'count': r['cnt']} for r in rows]
         except Exception:
-            return {'articles_24h': 0, 'by_brand': []}
+            pass
+        # 队列状态
+        try:
+            q = self.db._queue
+            result['queue_size'] = q.qsize()
+            result['queue_maxsize'] = q.maxsize
+        except Exception:
+            pass
+        return result
