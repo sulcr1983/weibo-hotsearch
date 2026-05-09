@@ -274,6 +274,9 @@ PLAYWRIGHT_ENABLED=false
 # 启动服务（nohup 模式，避免 systemd 重启循环）
 cd /opt/weibo-hotsearch && bash system/services/deploy.sh
 
+# 一键诊断
+bash system/services/diagnose.sh
+
 # 查看日志
 tail -f /opt/weibo-hotsearch/logs/main.log
 

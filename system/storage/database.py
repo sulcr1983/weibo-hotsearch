@@ -302,3 +302,15 @@ class Database:
     def queue_size(self):
         return self._queue.qsize()
 
+    async def count_articles(self) -> int:
+        async with aiosqlite.connect(self.db_path) as db:
+            cur = await db.execute('SELECT COUNT(*) FROM articles')
+            row = await cur.fetchone()
+            return row[0] if row else 0
+
+    async def count_weibo_events(self) -> int:
+        async with aiosqlite.connect(self.weibo_path) as db:
+            cur = await db.execute('SELECT COUNT(*) FROM hotsearch_events')
+            row = await cur.fetchone()
+            return row[0] if row else 0
+
