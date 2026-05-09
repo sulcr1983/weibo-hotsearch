@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>项目评估报告 · 汽车行业舆情监控系统 V4.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   设计令牌
+   ═══════════════════════════════════════════ */
+:root {
+  --navy-dark: #0F172A;
+  --navy-mid: #1E293B;
+  --navy-light: #334155;
+  --amber: #F59E0B;
+  --amber-light: #FCD34D;
+  --amber-glow: rgba(245, 158, 11, 0.15);
+  --blue: #2563EB;
+  --blue-light: #60A5FA;
+  --blue-bg: rgba(37, 99, 235, 0.08);
+  --bg: #F8F9FA;
+  --surface: #FFFFFF;
+  --surface-hover: #F3F4F6;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  --divider: #E5E7EB;
+  --divider-bold: #D1D5DB;
+  --green: #10B981;
+  --green-bg: rgba(16, 185, 129, 0.1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+  --font-cn: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-display: 'DM Serif Display', 'Noto Sans SC', serif;
+  --max-width: 1100px;
+}
+
+/* ═══════════════════════════════════════════
+   基础
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-cn);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   英雄区
+   ═══════════════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 82vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--navy-dark) 0%, var(--navy-mid) 35%, #1a2332 65%, var(--navy-dark) 100%);
+  overflow: hidden;
+}
+
+/* 几何装饰 — 网格 */
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, black 30%, transparent 70%);
+}
+
+/* 几何装饰 — 大圆环 */
+.hero-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(245, 158, 11, 0.06);
+  pointer-events: none;
+  transition: transform 0.15s ease-out;
+}
+.hero-ring-1 { width: 600px; height: 600px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.hero-ring-2 { width: 450px; height: 450px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+.hero-ring-3 { width: 300px; height: 300px; top: 50%; left: 50%; transform: translate(-50%,-50%); border-color: rgba(245, 158, 11, 0.12); }
+
+/* 几何装饰 — 菱形 */
+.hero-diamond {
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--amber);
+  opacity: 0.15;
+  transform: rotate(45deg);
+}
+.hero-diamond.d1 { top: 15%; left: 8%; }
+.hero-diamond.d2 { bottom: 20%; right: 12%; width: 18px; height: 18px; opacity: 0.08; }
+.hero-diamond.d3 { top: 30%; right: 6%; width: 8px; height: 8px; }
+
+/* 几何装饰 — 角标 */
+.hero-corner {
+  position: absolute;
+  width: 40px; height: 40px;
+  border-color: rgba(245, 158, 11, 0.2);
+  border-style: solid;
+}
+.hero-corner-tl { top: 40px; left: 40px; border-width: 2px 0 0 2px; }
+.hero-corner-tr { top: 40px; right: 40px; border-width: 2px 2px 0 0; }
+.hero-corner-bl { bottom: 40px; left: 40px; border-width: 0 0 2px 2px; }
+.hero-corner-br { bottom: 40px; right: 40px; border-width: 0 2px 2px 0; }
+
+/* 散点装饰 */
+.hero-dots {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: radial-gradient(2px 2px at 20% 30%, rgba(245,158,11,0.3), transparent),
+              radial-gradient(2px 2px at 80% 20%, rgba(245,158,11,0.2), transparent),
+              radial-gradient(1px 1px at 55% 80%, rgba(255,255,255,0.15), transparent),
+              radial-gradient(1px 1px at 10% 70%, rgba(255,255,255,0.1), transparent),
+              radial-gradient(1.5px 1.5px at 90% 65%, rgba(245,158,11,0.15), transparent);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 40px 24px;
+  max-width: 800px;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 6px 18px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: fadeSlideUp 0.8s ease 0.2s forwards;
+}
+
+.hero-grade {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 12vw, 10rem);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--amber);
+  letter-spacing: -0.03em;
+  text-shadow: 0 0 80px rgba(245, 158, 11, 0.15), 0 0 20px rgba(245, 158, 11, 0.08);
+  opacity: 0;
+  animation: fadeSlideUp 0.8s ease 0.35s forwards;
+}
+
+.hero-grade-sub {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 300;
+  color: rgba(255,255,255,0.5);
+  margin-top: 8px;
+  letter-spacing: 0.2em;
+  opacity: 0;
+  animation: fadeSlideUp 0.8s ease 0.5s forwards;
+}
+
+.hero-verdict {
+  margin-top: 48px;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: 400;
+  color: rgba(255,255,255,0.75);
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.8;
+  opacity: 0;
+  animation: fadeSlideUp 0.8s ease 0.65s forwards;
+}
+
+.hero-verdict strong {
+  color: var(--amber-light);
+  font-weight: 600;
+}
+
+/* 角标线 */
+.hero-line {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.15), transparent);
+  height: 1px;
+  left: 10%; right: 10%;
+}
+.hero-line-top { top: 0; }
+.hero-line-bot { bottom: 0; }
+
+/* ═══════════════════════════════════════════
+   容器 & 通用
+   ═══════════════════════════════════════════ */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section {
+  padding: 80px 0;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.section-label {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--blue);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.section-title-deco {
+  width: 40px; height: 3px;
+  background: var(--amber);
+  border-radius: 2px;
+  margin: 16px auto 0;
+}
+
+/* ═══════════════════════════════════════════
+   动画
+   ═══════════════════════════════════════════ */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes widthGrow {
+  from { width: 0 !important; }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════
+   一句话评价
+   ═══════════════════════════════════════════ */
+.verdict-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 48px 56px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.verdict-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--amber), var(--blue));
+}
+
+.verdict-quote {
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.verdict-quote strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.verdict-quote .highlight {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════
+   三维度评分
+   ═══════════════════════════════════════════ */
+.dimensions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.dim-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 32px 28px 28px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.dim-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 20%; right: 20%;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dim-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dim-card:hover::after { opacity: 1; }
+
+.dim-card:nth-child(1)::after { background: var(--amber); }
+.dim-card:nth-child(2)::after { background: var(--blue); }
+.dim-card:nth-child(3)::after { background: var(--green); }
+
+.dim-grade {
+  font-family: var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 400;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.dim-card:nth-child(1) .dim-grade { color: var(--amber); }
+.dim-card:nth-child(2) .dim-grade { color: var(--blue); }
+.dim-card:nth-child(3) .dim-grade { color: var(--green); }
+
+.dim-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  width: 0;
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dim-card:nth-child(1) .bar-fill { background: linear-gradient(90deg, #F59E0B, #FCD34D); }
+.dim-card:nth-child(2) .bar-fill { background: linear-gradient(90deg, #2563EB, #60A5FA); }
+.dim-card:nth-child(3) .bar-fill { background: linear-gradient(90deg, #10B981, #34D399); }
+
+.dim-sub {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  margin-top: 10px;
+}
+
+/* ═══════════════════════════════════════════
+   亮点卡片
+   ═══════════════════════════════════════════ */
+.highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.highlight-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 28px 24px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.highlight-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.highlight-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: var(--amber);
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.highlight-card:hover::before { opacity: 1; }
+
+.highlight-num {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.highlight-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.highlight-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.highlight-desc code {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 0.8rem;
+  background: var(--surface-hover);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════
+   详细分析
+   ═══════════════════════════════════════════ */
+.analysis-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 48px 48px;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.analysis-card:last-child { margin-bottom: 0; }
+
+.analysis-number {
+  position: absolute;
+  top: -8px; right: 32px;
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 400;
+  line-height: 1;
+  color: rgba(37, 99, 235, 0.06);
+  pointer-events: none;
+}
+
+.analysis-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.analysis-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.analysis-card:nth-child(1) .analysis-icon { background: var(--blue-bg); }
+.analysis-card:nth-child(2) .analysis-icon { background: var(--amber-glow); }
+.analysis-card:nth-child(3) .analysis-icon { background: var(--green-bg); }
+
+.analysis-card:nth-child(1) .analysis-icon svg,
+.analysis-card:nth-child(2) .analysis-icon svg,
+.analysis-card:nth-child(3) .analysis-icon svg { fill: currentColor; }
+
+.analysis-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.analysis-grade-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 2px 10px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.analysis-card:nth-child(1) .analysis-grade-tag { background: var(--blue-bg); color: var(--blue); }
+.analysis-card:nth-child(2) .analysis-grade-tag { background: var(--amber-glow); color: var(--amber); }
+.analysis-card:nth-child(3) .analysis-grade-tag { background: var(--green-bg); color: var(--green); }
+
+.analysis-body {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.analysis-body p {
+  margin-bottom: 12px;
+}
+
+.analysis-body p:last-child { margin-bottom: 0; }
+
+.analysis-body strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.analysis-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+
+.analysis-body ul li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.analysis-body ul li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 10px;
+  width: 6px; height: 6px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.analysis-card:nth-child(1) .analysis-body ul li::before { background: var(--blue); }
+.analysis-card:nth-child(2) .analysis-body ul li::before { background: var(--amber); }
+.analysis-card:nth-child(3) .analysis-body ul li::before { background: var(--green); }
+
+/* ═══════════════════════════════════════════
+   改进空间表格
+   ═══════════════════════════════════════════ */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.improve-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.improve-table thead {
+  background: var(--navy-mid);
+}
+
+.improve-table th {
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 20px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.improve-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--divider);
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.improve-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.improve-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.improve-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.improve-table .field-cell {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.improve-table .issue-cell {
+  color: var(--text-secondary);
+}
+
+.improve-table .suggest-cell {
+  color: var(--blue);
+}
+
+/* ═══════════════════════════════════════════
+   结论区
+   ═══════════════════════════════════════════ */
+.conclusion-section {
+  padding: 80px 0 100px;
+}
+
+.conclusion-card {
+  background: linear-gradient(135deg, var(--navy-dark), var(--navy-mid));
+  border-radius: var(--radius-xl);
+  padding: 56px 56px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.conclusion-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(245,158,11,0.06), transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(37,99,235,0.06), transparent 50%);
+  pointer-events: none;
+}
+
+.conclusion-grade {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5rem);
+  color: var(--amber);
+  line-height: 1;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.conclusion-grade-sub {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.15em;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.conclusion-divider {
+  width: 40px; height: 2px;
+  background: rgba(245,158,11,0.3);
+  margin: 0 auto 28px;
+  border-radius: 1px;
+}
+
+.conclusion-text {
+  font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+  color: rgba(255,255,255,0.7);
+  line-height: 1.9;
+  max-width: 680px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.conclusion-text strong {
+  color: var(--amber-light);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════
+   页脚
+   ═══════════════════════════════════════════ */
+.footer {
+  text-align: center;
+  padding: 40px 24px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--divider);
+}
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .hero { min-height: 70vh; }
+  .hero-corner { display: none; }
+  .hero-ring-1 { width: 350px; height: 350px; }
+  .hero-ring-2 { width: 260px; height: 260px; }
+  .hero-ring-3 { width: 180px; height: 180px; }
+
+  .section { padding: 56px 0; }
+  .section-header { margin-bottom: 40px; }
+
+  .verdict-card { padding: 32px 24px; }
+
+  .dimensions-grid { grid-template-columns: 1fr; gap: 16px; }
+  .highlights-grid { grid-template-columns: 1fr; gap: 16px; }
+
+  .analysis-card { padding: 32px 24px; }
+  .analysis-number { font-size: 3.5rem; top: -4px; right: 20px; }
+  .analysis-body ul { grid-template-columns: 1fr; }
+
+  .improve-table { font-size: 0.8rem; }
+  .improve-table th, .improve-table td { padding: 12px 14px; }
+
+  .conclusion-section { padding: 48px 0 64px; }
+  .conclusion-card { padding: 40px 24px 36px; border-radius: var(--radius-lg); }
+}
+
+@media (max-width: 480px) {
+  .hero { min-height: 65vh; }
+  .hero-content { padding: 24px 16px; }
+  .container { padding: 0 16px; }
+  .analysis-card { padding: 24px 18px; }
+  .analysis-head { gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════ 英雄区 ════════════════ -->
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-ring hero-ring-1"></div>
+  <div class="hero-ring hero-ring-2"></div>
+  <div class="hero-ring hero-ring-3"></div>
+  <div class="hero-dots"></div>
+  <div class="hero-diamond d1"></div>
+  <div class="hero-diamond d2"></div>
+  <div class="hero-diamond d3"></div>
+  <div class="hero-corner hero-corner-tl"></div>
+  <div class="hero-corner hero-corner-tr"></div>
+  <div class="hero-corner hero-corner-bl"></div>
+  <div class="hero-corner hero-corner-br"></div>
+  <div class="hero-line hero-line-top"></div>
+  <div class="hero-line hero-line-bot"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">Technical Assessment Report</div>
+    <div class="hero-grade">B+ ~ A-</div>
+    <div class="hero-grade-sub">职业级 · 独立开发者作品</div>
+    <div class="hero-verdict">
+      这是一个<strong>有真实用户、经历过生产验证、架构清晰、工程意识良好</strong>的个人项目。<br>
+      代码量约 5,400 行 Python，覆盖从数据采集到多渠道推送的完整闭环。
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════ 一句话评价 ════════════════ -->
+<section class="section" style="padding-bottom:0;">
+  <div class="container">
+    <div class="verdict-card reveal">
+      <div class="verdict-quote">
+        超出个人项目预期、接近小团队专业水准的舆情监控系统。<br>
+        V4.3 不是原型或玩具，而是经历过 <strong>至少 4 轮重构</strong>、踩过不少坑的 <span class="highlight">实战产品</span>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 三维度评分 ════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Scorecard</div>
+      <h2 class="section-title">三维度评估</h2>
+      <div class="section-title-deco"></div>
+    </div>
+
+    <div class="dimensions-grid">
+      <div class="dim-card reveal" style="transition-delay:0.1s;">
+        <div class="dim-grade">A-</div>
+        <div class="dim-label">架构设计</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="88"></div>
+        </div>
+        <div class="dim-sub">分层清晰 · 职责分离 · 扩展性强</div>
+      </div>
+      <div class="dim-card reveal" style="transition-delay:0.2s;">
+        <div class="dim-grade">B+</div>
+        <div class="dim-label">代码质量</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="78"></div>
+        </div>
+        <div class="dim-sub">类型安全 · 异常完备 · 局部可优化</div>
+      </div>
+      <div class="dim-card reveal" style="transition-delay:0.3s;">
+        <div class="dim-grade">A-</div>
+        <div class="dim-label">工程化成熟度</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-width="85"></div>
+        </div>
+        <div class="dim-sub">版本迭代 · 配置管理 · 崩溃恢复</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 核心亮点 ════════════════ -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Highlights</div>
+      <h2 class="section-title">核心亮点</h2>
+      <div class="section-title-deco"></div>
+    </div>
+
+    <div class="highlights-grid">
+      <div class="highlight-card reveal" style="transition-delay:0.1s;">
+        <div class="highlight-num">01</div>
+        <div class="highlight-title">采集层分层设计</div>
+        <div class="highlight-desc">
+          五种采集策略（RSS / Web直采 / 汽车垂媒 / Playwright渲染 / 微博免Cookie API），
+          每个采集器独立封装，数据源通过 <code>sources.yml</code> 声明式配置，
+          新增媒体源只需编辑 YAML。
+        </div>
+      </div>
+      <div class="highlight-card reveal" style="transition-delay:0.2s;">
+        <div class="highlight-num">02</div>
+        <div class="highlight-title">Observability 可观测性模块</div>
+        <div class="highlight-desc">
+          完整的漏斗追踪（原始抓取 → 品牌命中 → 维度分类 → 入库），
+          每条文章带 Trace ID 日志、DropReason 枚举、HTML 有效性断言，
+          失败现场快照保存。个人项目中极为罕见。
+        </div>
+      </div>
+      <div class="highlight-card reveal" style="transition-delay:0.3s;">
+        <div class="highlight-num">03</div>
+        <div class="highlight-title">Playwright 反检测脚本</div>
+        <div class="highlight-desc">
+          覆盖 8 个浏览器指纹特征隐藏（webdriver / plugins / languages / platform 等），
+          模拟人类滚动行为、随机延迟。比不少商业爬虫做得更细致。
+        </div>
+      </div>
+      <div class="highlight-card reveal" style="transition-delay:0.4s;">
+        <div class="highlight-num">04</div>
+        <div class="highlight-title">异步写入队列 + SQLite WAL</div>
+        <div class="highlight-desc">
+          基于 <code>asyncio.Queue</code> 的写缓冲架构，避免高频采集时频繁连接数据库；
+          SQLite WAL 模式 + NORMAL 同步，兼顾性能和数据安全。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 详细分析 ════════════════ -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Deep Dive</div>
+      <h2 class="section-title">详细分析</h2>
+      <div class="section-title-deco"></div>
+    </div>
+
+    <!-- 架构 -->
+    <div class="analysis-card reveal">
+      <div class="analysis-number">01</div>
+      <div class="analysis-head">
+        <div class="analysis-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div class="analysis-title">架构设计 <span class="analysis-grade-tag">A-</span></div>
+      </div>
+      <div class="analysis-body">
+        <p>
+          系统采用<strong>四层流水线架构</strong>：采集层、处理层、存储层、推送层，
+          每层职责清晰，模块间通过数据契约（dict）解耦。
+        </p>
+        <ul>
+          <li><strong>采集层</strong> — 5 种策略（RSS / Web / 垂媒 / Playwright / 微博API），独立封装</li>
+          <li><strong>处理层</strong> — 品牌匹配 → 多级过滤（UGC / 金融快讯 / 观点）→ 评分 → 维度分类 → SimHash去重 → 事件聚类</li>
+          <li><strong>存储层</strong> — 异步写入队列 + SQLite WAL，双库分离（文章库 + 微博库）</li>
+          <li><strong>推送层</strong> — 日报/周报/月报 + 飞书卡片 + 邮件HTML + AI总结（DeepSeek API）</li>
+        </ul>
+        <p>
+          值得注意的设计决策：微博采用<strong>57~67 分钟随机间隔</strong>避免被限流；
+          数据源通过 <code>sources.yml</code> 声明式配置，新增媒体源只需编辑 YAML 文件。
+        </p>
+      </div>
+    </div>
+
+    <!-- 代码质量 -->
+    <div class="analysis-card reveal">
+      <div class="analysis-number">02</div>
+      <div class="analysis-head">
+        <div class="analysis-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div class="analysis-title">代码质量 <span class="analysis-grade-tag">B+</span></div>
+      </div>
+      <div class="analysis-body">
+        <p>
+          代码风格统一，约 5,400 行 Python，<strong>几乎全覆盖类型注解</strong>，
+          异常处理周到（单个源崩溃不影响整体），日志分级清晰。
+        </p>
+        <ul>
+          <li><strong>类型安全</strong> — 几乎所有函数都有类型签名，在 Python 个人项目中属于上游水平</li>
+          <li><strong>异常防御</strong> — 每个采集器有独立 try/except，启动自检验证依赖+环境变量+数据库路径</li>
+          <li><strong>错误恢复</strong> — <code>reschedule_job</code> 失败有 fallback 机制，能防止崩溃循环</li>
+          <li><strong>可优化</strong> — 品牌词典存在两套副本（regex + dict），部分函数偏长，测试覆盖可扩展</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 工程化 -->
+    <div class="analysis-card reveal">
+      <div class="analysis-number">03</div>
+      <div class="analysis-head">
+        <div class="analysis-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="analysis-title">工程化成熟度 <span class="analysis-grade-tag">A-</span></div>
+      </div>
+      <div class="analysis-body">
+        <p>
+          超出独立开发者平均水准的工程化能力。V4.1 到 V4.3 的迭代日志显示了<strong>真实的运维经验</strong>。
+        </p>
+        <ul>
+          <li><strong>版本管理</strong> — Git commit 规范，版本号清晰，CHANGELOG 有实质内容</li>
+          <li><strong>配置体系</strong> — <code>.env</code> + <code>config.py</code> + <code>sources.yml</code> 三层，敏感信息与代码分离</li>
+          <li><strong>部署闭环</strong> — Docker RSSHub + deploy.sh 一键部署 + 启动自检</li>
+          <li><strong>运维细节</strong> — Windows 兼容修复、jieba API 变更适配、8 天日志轮转、数据自动清理</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 改进空间表格 ════════════════ -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Improvements</div>
+      <h2 class="section-title">改进空间</h2>
+      <div class="section-title-deco"></div>
+    </div>
+
+    <div class="table-wrap reveal">
+      <table class="improve-table">
+        <thead>
+          <tr>
+            <th>领域</th>
+            <th>问题</th>
+            <th>建议</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-cell">测试</td>
+            <td class="issue-cell">只有 8 个单元测试，无集成测试 / Mock 测试</td>
+            <td class="suggest-cell">加一套 docker-compose 端到端测试，覆盖采集到入库到推送全链路</td>
+          </tr>
+          <tr>
+            <td class="field-cell">配置安全</td>
+            <td class="issue-cell"><code>config.py</code> 中 AI_API_KEY 存在 fallback 默认值</td>
+            <td class="suggest-cell">去掉硬编码默认值，缺失就直接报错，避免误用测试 key</td>
+          </tr>
+          <tr>
+            <td class="field-cell">品牌词典</td>
+            <td class="issue-cell"><code>brand_matcher.py</code> 和 <code>weibo_collector.py</code> 维护了两套品牌词典</td>
+            <td class="suggest-cell">收敛到 YAML 单一配置源，新增品牌只改一处</td>
+          </tr>
+          <tr>
+            <td class="field-cell">采集频率</td>
+            <td class="issue-cell">新闻固定 60 分钟采集，所有源同等对待</td>
+            <td class="suggest-cell">对 Level 1 源（新华网等）缩短到 30min，Level 3 拉长到 120min</td>
+          </tr>
+          <tr>
+            <td class="field-cell">自监控</td>
+            <td class="issue-cell">系统缺少自身存活告警。如果飞书日报没发出来，无人知道</td>
+            <td class="suggest-cell">加一个简单的心跳机制：日报未生成则发告警邮件</td>
+          </tr>
+          <tr>
+            <td class="field-cell">知识沉淀</td>
+            <td class="issue-cell">品牌别名字典静态维护，无法适应新出现的品牌简称</td>
+            <td class="suggest-cell">利用 AI 从漏抓内容中自动发现新别名，周报时建议添加</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 结论 ════════════════ -->
+<section class="conclusion-section">
+  <div class="container">
+    <div class="conclusion-card reveal">
+      <div class="conclusion-grade">B+ ~ A-</div>
+      <div class="conclusion-grade-sub">FINAL VERDICT</div>
+      <div class="conclusion-divider"></div>
+      <div class="conclusion-text">
+        在独立开发者作品中属于<strong>中上等水准</strong>。与大多数 GitHub 上的舆情监控项目相比，
+        它<strong>不是只有爬虫</strong>——而是包含完整 ETL 流水线、多维度分类引擎、AI 总结、
+        多渠道推送、以及生产环境必备的可观测性。放在任何技术团队里，
+        这套代码都展示出作者具备<strong>扎实的后端工程能力和产品思维</strong>。
+        <br><br>
+        距离商业产品（慧科、Meltwater）的核心差距不在代码质量，
+        而在<strong>多租户隔离、SLA 监控、测试覆盖率</strong>这三个维度——这些都是团队而非个人能解决的问题。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 页脚 ════════════════ -->
+<footer class="footer">
+  汽车行业舆情监控系统 V4.3 · 技术评估报告 &mdash; 2026.05
+</footer>
+
+<!-- ════════════════ JavaScript ════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ── Intersection Observer for reveal animations ──
+  var revealEls = document.querySelectorAll('.reveal');
+  if (revealEls.length) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    revealEls.forEach(function(el) { observer.observe(el); });
+  }
+
+  // ── Animate progress bars on scroll ──
+  function animateBars() {
+    var fills = document.querySelectorAll('.bar-fill');
+    fills.forEach(function(bar) {
+      var rect = bar.getBoundingClientRect();
+      var winH = window.innerHeight;
+      if (rect.top < winH - 60) {
+        var w = bar.getAttribute('data-width');
+        if (w && bar.style.width !== w + '%') {
+          bar.style.width = w + '%';
+        }
+      }
+    });
+  }
+
+  window.addEventListener('load', animateBars);
+  window.addEventListener('scroll', animateBars);
+
+  // ── Parallax-like hero ring movement ──
+  var hero = document.querySelector('.hero');
+  if (hero) {
+    hero.addEventListener('mousemove', function(e) {
+      var rect = hero.getBoundingClientRect();
+      var x = (e.clientX - rect.left) / rect.width - 0.5;
+      var y = (e.clientY - rect.top) / rect.height - 0.5;
+      var rings = hero.querySelectorAll('.hero-ring');
+      rings.forEach(function(r, i) {
+        var factor = (i + 1) * 4;
+        r.style.transform = 'translate(calc(-50% + ' + (x * factor) + 'px), calc(-50% + ' + (y * factor) + 'px))';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

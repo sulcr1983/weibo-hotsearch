@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞书卡片模拟预览 — 汽车舆情监控</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #E8EAED;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', 'PingFang SC', sans-serif;
+}
+.card {
+    max-width: 520px;
+    width: 100%;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    overflow: hidden;
+}
+.card-header {
+    padding: 14px 20px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+}
+.card-header.wathet { background: linear-gradient(135deg, #4A90D9, #357ABD); }
+.card-header.turquoise { background: linear-gradient(135deg, #00B4B4, #00848A); }
+.card-body { padding: 16px 20px; }
+.lark-md { line-height: 1.65; }
+.lark-md p { margin: 0; }
+.lark-md strong { font-weight: 600; color: #111827; }
+.lark-md a { color: #2563EB; text-decoration: none; }
+.lark-md a:hover { text-decoration: underline; }
+.lark-md hr { border: none; border-top: 1px solid #E5E7EB; margin: 12px 0; }
+.divider { border-top: 1px solid #E5E7EB; margin: 10px 0; }
+.note { font-size: 12px; color: #9CA3AF; margin-top: 4px; }
+.item { margin-bottom: 6px; }
+.item .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-right: 4px; vertical-align: middle; }
+.item .badge-hot { background: #FEE2E2; color: #DC2626; }
+.item .badge-new { background: #DCFCE7; color: #16A34A; }
+.item .badge-boom { background: #FEE2E2; color: #DC2626; }
+.meta { font-size: 12px; color: #9CA3AF; margin-top: 2px; margin-bottom: 8px; padding-left: 8px; }
+.brand-stats { font-size: 13px; margin-bottom: 8px; }
+.section-header { font-size: 14px; font-weight: 600; color: #111827; margin: 10px 0 6px; }
+.stat-line { font-size: 13px; color: #6B7280; margin-bottom: 8px; }
+.footer-note { font-size: 12px; color: #9CA3AF; margin-top: 8px; text-align: center; }
+.link-check { font-size: 11px; color: #6B7280; margin-left: 6px; }
+.link-check.ok { color: #10B981; }
+.link-check.err { color: #EF4444; }
+</style>
+</head>
+<body>
+<div class="card" style="margin-bottom: 32px;">
+<div class="card-header wathet">🚗 昨日汽车行业舆情热点新闻</div>
+<div class="card-body lark-md">
+<div class="section-header"><strong>昨日汽车行业舆情热点新闻</strong><br><span style="color:#9CA3AF; font-weight:600">2026-05-04</span></div>
+<div class="divider"></div>
+<div class="stat-line">📊 总计监测 <strong>13</strong> 条　|　📰 新闻 <span style="color:#F59E0B; font-weight:600"><strong>7</span> 条　|　🔥 热搜 <span style="color:#E74C3C; font-weight:600"><strong>6</span> 条</div>
+<div class="divider"></div>
+<div class="section-header"><strong>🔥 微博热搜 · 6条</strong></div>
+<div class="item"><span style="color:#FF6900; font-weight:600"><strong>小米汽车</span> <strong>小米SU7Ultra交付破万</strong> <a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E4%BA%A4%E4%BB%98%E7%A0%B4%E4%B8%87" target="_blank" title="https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E4%BA%A4%E4%BB%98%E7%A0%B4%E4%B8%87">🔗</a> 🕐×3 <span style="color:#FF4D4F; font-weight:600">热</span></div>
+<div class="item"><span style="color:#C0392B; font-weight:600"><strong>比亚迪</span> <strong>比亚迪海鸥新款上市</strong> <a href="https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E6%96%B0%E6%AC%BE%E4%B8%8A%E5%B8%82" target="_blank" title="https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E6%96%B0%E6%AC%BE%E4%B8%8A%E5%B8%82">🔗</a> 🕐×2 <span style="color:#FF4D4F; font-weight:600">新</span></div>
+<div class="item"><span style="color:#E74C3C; font-weight:600"><strong>特斯拉</span> <strong>特斯拉FSD在华获批</strong> <a href="https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E5%9C%A8%E5%8D%8E%E8%8E%B7%E6%89%B9" target="_blank" title="https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E5%9C%A8%E5%8D%8E%E8%8E%B7%E6%89%B9">🔗</a> 🕐×5 <span style="color:#FF4D4F; font-weight:600">爆</span></div>
+<div class="item"><span style="color:#16213e; font-weight:600"><strong>蔚来</span> <strong>蔚来ET9发布即交付</strong> <a href="https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5ET9%E5%8F%91%E5%B8%83%E5%8D%B3%E4%BA%A4%E4%BB%98" target="_blank" title="https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5ET9%E5%8F%91%E5%B8%83%E5%8D%B3%E4%BA%A4%E4%BB%98">🔗</a></div>
+<div class="item"><span style="color:#FF6900; font-weight:600"><strong>小米汽车</span> <strong>雷军回应SU7质量质疑</strong> <a href="https://s.weibo.com/weibo?q=%E9%9B%B7%E5%86%9B%E5%9B%9E%E5%BA%94SU7%E8%B4%A8%E9%87%8F%E8%B4%A8%E7%96%91" target="_blank" title="https://s.weibo.com/weibo?q=%E9%9B%B7%E5%86%9B%E5%9B%9E%E5%BA%94SU7%E8%B4%A8%E9%87%8F%E8%B4%A8%E7%96%91">🔗</a> 🕐×2 <span style="color:#FF4D4F; font-weight:600">热</span></div>
+<div class="item"><span style="color:#16213e; font-weight:600"><strong>小鹏汽车</span> <strong>小鹏MONA首月订单破5万</strong> <a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E9%B9%8FMONA%E9%A6%96%E6%9C%88%E8%AE%A2%E5%8D%95%E7%A0%B45%E4%B8%87" target="_blank" title="https://s.weibo.com/weibo?q=%E5%B0%8F%E9%B9%8FMONA%E9%A6%96%E6%9C%88%E8%AE%A2%E5%8D%95%E7%A0%B45%E4%B8%87">🔗</a> <span style="color:#FF4D4F; font-weight:600">新</span></div>
+<div class="divider"></div>
+<div class="section-header"><strong>📰 新闻热点 · 7条</strong></div>
+<div class="item"><span style="color:#FF6900; font-weight:600"><strong>小米汽车</span> <span style="color:#9CA3AF; font-weight:600">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://auto.gasgoo.com/news/202605/1I70456301C501.shtml" target="_blank" title="https://auto.gasgoo.com/news/202605/1I70456301C501.shtml">小米SU7 Ultra开启首批交付 雷军亲自到场</a></div>
+<div class="note">小米SU7 Ultra开启首批交付 · 盖世汽车 · 2026-05-04 10:15</div>
+<div class="item"><span style="color:#4A90D9; font-weight:600"><strong>理想汽车</span> <span style="color:#9CA3AF; font-weight:600">1条</span></div>
+<div class="item"><strong> 其他</strong></div>
+<div class="item">• <a href="https://new.qq.com/rain/a/20260504A0012345" target="_blank" title="https://new.qq.com/rain/a/20260504A0012345">理想L7 Pro起售价调整至22.98万 应对市场竞争</a></div>
+<div class="note">理想L7 Pro起售价调整至22.98万 · 腾讯新闻 · 2026-05-04 13:00</div>
+<div class="item"><span style="color:#C0392B; font-weight:600"><strong>比亚迪</span> <span style="color:#9CA3AF; font-weight:600">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://www.d1ev.com/news/xinche/20260504123456.shtml" target="_blank" title="https://www.d1ev.com/news/xinche/20260504123456.shtml">比亚迪海鸥荣耀版上市售6.98万起 续航超400km</a></div>
+<div class="note">比亚迪海鸥荣耀版上市售6.98万起 · 第一电动 · 2026-05-04 14:30</div>
+<div class="item"><span style="color:#E74C3C; font-weight:600"><strong>特斯拉</span> <span style="color:#9CA3AF; font-weight:600">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://www.autohome.com.cn/news/202605/4/1234567.html" target="_blank" title="https://www.autohome.com.cn/news/202605/4/1234567.html">特斯拉FSD最新版本在国内获批 上海率先开放路测</a></div>
+<div class="note">特斯拉FSD最新版本在国内获批 · 汽车之家 · 2026-05-04 09:00</div>
+<div class="divider"></div>
+<div class="note">生成时间：2026-05-05 09:00 | 汽车行业舆情监控系统</div>
+</div>
+</div>
+<div class="card" style="margin-bottom: 32px;">
+<div class="card-header turquoise">🔗 所有链接可点击性测试</div>
+<div class="card-body" style="font-size:14px; line-height:1.8;">
+<div><strong>🔥 微博</strong>：小米SU7Ultra交付破万 <a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E4%BA%A4%E4%BB%98%E7%A0%B4%E4%B8%87" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>🔥 微博</strong>：比亚迪海鸥新款上市 <a href="https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E6%96%B0%E6%AC%BE%E4%B8%8A%E5%B8%82" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>🔥 微博</strong>：特斯拉FSD在华获批 <a href="https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E5%9C%A8%E5%8D%8E%E8%8E%B7%E6%89%B9" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>🔥 微博</strong>：蔚来ET9发布即交付 <a href="https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5ET9%E5%8F%91%E5%B8%83%E5%8D%B3%E4%BA%A4%E4%BB%98" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>🔥 微博</strong>：雷军回应SU7质量质疑 <a href="https://s.weibo.com/weibo?q=%E9%9B%B7%E5%86%9B%E5%9B%9E%E5%BA%94SU7%E8%B4%A8%E9%87%8F%E8%B4%A8%E7%96%91" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>🔥 微博</strong>：小鹏MONA首月订单破5万 <a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E9%B9%8FMONA%E9%A6%96%E6%9C%88%E8%AE%A2%E5%8D%95%E7%A0%B45%E4%B8%87" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：比亚迪海鸥荣耀版上市售6.98万起 续航超400km... <a href="https://www.d1ev.com/news/xinche/20260504123456.shtml" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：小米SU7 Ultra开启首批交付 雷军亲自到场... <a href="https://auto.gasgoo.com/news/202605/1I70456301C501.shtml" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：特斯拉FSD最新版本在国内获批 上海率先开放路测... <a href="https://www.autohome.com.cn/news/202605/4/1234567.html" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：蔚来ET9正式发布 定位行政旗舰轿车 售价80万起... <a href="https://www.sohu.com/a/123456789_100286562" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：小鹏MONA首月订单突破5万台 何小鹏发内部信庆祝... <a href="https://www.dongchedi.com/article/7280001234567890" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：理想L7 Pro起售价调整至22.98万 应对市场竞争... <a href="https://new.qq.com/rain/a/20260504A0012345" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+<div><strong>📰 新闻</strong>：吉利银河E8获C-NCAP五星安全评级... <a href="https://www.12365auto.com/news/20260504/456789.shtml" target="_blank" style="color:#2563EB">🔗 打开</a><span class="link-check ok"> ✓</span></div>
+</div>
+</div>
+<div class="card" style="margin-bottom: 32px;">
+<div class="card-header" style="background:#1E293B;">📋 实际推送JSON (部分)</div>
+<div class="card-body">
+<pre style="font-size:11px; line-height:1.4; overflow-x:auto; background:#F8F9FA; padding:12px; border-radius:6px; max-height:400px; overflow-y:auto;">{
+  "msg_type": "interactive",
+  "card": {
+    "header": {
+      "title": {
+        "tag": "plain_text",
+        "content": "🚗 昨日汽车行业舆情热点新闻"
+      },
+      "template": "wathet"
+    },
+    "elements": [
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**昨日汽车行业舆情热点新闻**\n<font color=\"#9CA3AF\">2026-05-04</font>..."
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "📊 总计监测 **13** 条　|　📰 新闻 <font color=\"#F59E0B\">**7**</font> 条　|　🔥 热搜 <font color=\"..."
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**🔥 微博热搜 · 6条**..."
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#FF6900\">**小米汽车**</font> **小米SU7Ultra交付破万** [🔗](https://s.weibo.com..."
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#C0392B\">**比亚迪**</font> **比亚迪海鸥新款上市** [🔗](https://s.weibo.com/weibo..."
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#E74C3C\">**特斯拉**</font> **特斯拉FSD在华获批** [🔗](https://s.weibo.com/weib..."
+        }
+      },
+      {
+        "...": "... 还有 23 个元素"
+      }
+    ]
+  }
+}</pre>
+</div>
+</div>
+</body>
+</html>

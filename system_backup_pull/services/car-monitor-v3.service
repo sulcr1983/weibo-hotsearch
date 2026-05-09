@@ -1,0 +1,17 @@
+[Unit]
+Description=Car Industry Monitor V4.1
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/weibo-hotsearch
+ExecStart=/opt/weibo-hotsearch/venv/bin/python system/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,8 @@
-# 汽车行业舆情监控 V4.3 — 数据源统一配置（RSSHub 服务器版）
-# RSSHub: 服务器 Docker 部署 http://101.96.230.81:1200
+# 汽车行业舆情监控 V5 — 数据源统一配置
+# 非AI优先：RSS + Web(HTTP) → 仅极少数源用 Playwright/AI兜底
 
 rss_feeds:
-  # ── 直接 RSS（备用）──
+  # ── 直接 RSS ──
   - name: 36氪
     url: https://36kr.com/feed
     level: 3
@@ -13,7 +13,7 @@ rss_feeds:
     url: https://www.geekpark.net/rss
     level: 3
 
-  # ── RSSHub 聚合 — Level 2：财经/综合 ──
+  # ── RSSHub Level 2：财经/综合 ──
   - name: 第一财经快讯
     url: "{RSSHUB_HOST}/yicai/brief"
     level: 2
@@ -32,9 +32,8 @@ rss_feeds:
   - name: 财新最新
     url: "{RSSHUB_HOST}/caixin/latest"
     level: 2
-  # d1ev/gasgoo RSSHub路由不存在，使用web_feeds中的HTML直采
 
-  # ── RSSHub 聚合 — Level 3：科技/新媒体 ──
+  # ── RSSHub Level 3：科技/新媒体 ──
   - name: 36氪快讯
     url: "{RSSHUB_HOST}/36kr/newsflashes"
     level: 3
@@ -88,6 +87,7 @@ web_feeds:
       item_path: Result
       title_key: title
       link_key: url
+      link_prefix: https://www.ithome.com
       time_key: postdate
       summary_key: description
 
@@ -97,112 +97,97 @@ web_feeds:
     method: api
     api_config:
       item_path: _
-      title_key: title
-      link_key: id
-      link_prefix: https://www.sohu.com/a/
-      summary_key: brief
 
-  # ── HTML 抓取源（可能被封，备用）──
+  # ── Level 2：HTML 直采（已修复反爬 — 用现代UA+SSL跳过）──
   - name: 搜狐汽车
     url: https://auto.sohu.com/
     level: 2
     method: html
-    max_items: 30
     selectors:
-      article: "a[href*='/a/']"
-
-  - name: 中国汽车报
-    url: https://www.cnautonews.com/
-    level: 1
-    method: html
+      article: a[href]
     max_items: 20
-    selectors:
-      article: "a[href*='.html']"
-    no_verify_ssl: true
-
-# Playwright 浏览器采集 — JS渲染页面 + 权威来源补充
-playwright_feeds:
-  # ── Level 1：国家级权威传统媒体 ──
-  - name: 新华网汽车
-    url: http://www.xinhuanet.com/auto/
-    level: 1
-    method: playwright
-    max_items: 20
-    selectors:
-      article: "a[href*='.htm'], a[href*='.html']"
-      container: "div.news-list li, ul.listWrap li, li, div.item"
-
-  - name: 央视汽车
-    url: https://auto.cctv.com/
-    level: 1
-    method: playwright
-    max_items: 20
-    extra_headers:
-      Referer: https://www.cctv.com/
-    selectors:
-      article: "a[href]"
-      container: "li, div.item, div.list-item, div.news-item, div.text-list li"
-
-  - name: 人民网汽车
-    url: http://auto.people.com.cn/GB/index.html
-    level: 1
-    method: playwright
-    max_items: 20
-    selectors:
-      article: "a[href*='.html']"
-      container: "div.news-list li, div.list-item, li, div.news, div.ej_list_box li"
-
-  # ── Level 2：垂直汽车媒体 ──
-  - name: 太平洋汽车网
-    url: https://www.pcauto.com.cn/news/
-    level: 2
-    method: playwright
-    max_items: 25
-    extra_headers:
-      Referer: https://www.pcauto.com.cn/
-    selectors:
-      article: "a[href*='.html']"
-      container: "li, div.item, div.news-item, a[class*='title'], h3 a"
 
   - name: 腾讯汽车
     url: https://new.qq.com/ch/auto/
     level: 2
-    method: playwright
-    max_items: 25
+    method: html
     selectors:
-      article: "a[href*='new.qq.com']"
-      container: "li, div.item, div.list-item, article, div.card"
+      article: a[href]
+    max_items: 15
 
-# 汽车垂媒（HTML直采 — 大部分被封，备用保底）
-auto_feeds:
+  - name: 太平洋汽车网
+    url: https://www.pcauto.com.cn/news/
+    level: 2
+    method: html
+    selectors:
+      article: a[href]
+    max_items: 15
+
   - name: 汽车之家
     url: https://m.autohome.com.cn/
     level: 2
     method: html
-    max_items: 20
     selectors:
-      article: "a[href*='/news/']"
+      article: a[href]
+    max_items: 15
 
   - name: 懂车帝
     url: https://www.dongchedi.com/
     level: 2
     method: html
-    max_items: 20
     selectors:
-      article: "a[href*='/article/']"
+      article: a[href]
+    max_items: 15
+
+  - name: 易车网
+    url: https://news.yiche.com/
+    level: 2
+    method: html
+    selectors:
+      article: a[href]
+    max_items: 15
 
   - name: 爱卡汽车
     url: https://info.xcar.com.cn/list/
     level: 2
     method: html
-    max_items: 20
     selectors:
-      article: "a[href*='/info/']"
+      article: a[href]
+    max_items: 15
 
-  - name: 易车网新闻
-    url: https://news.yiche.com/
+  - name: 盖世汽车
+    url: https://m.gasgoo.com/
     level: 2
     method: html
-    max_items: 20
     selectors:
-      article: "a[href*='/']"
+      article: a[href]
+    max_items: 15
+
+  - name: 电车之家
+    url: https://www.diandong.com/news/
+    level: 2
+    method: html
+    selectors:
+      article: a[href]
+    max_items: 15
+
+  - name: 央视汽车
+    url: https://auto.cctv.com/
+    level: 1
+    method: html
+    selectors:
+      article: a[href]
+    max_items: 15
+
+  - name: 新华网汽车
+    url: http://www.xinhuanet.com/auto/
+    level: 1
+    method: html
+    selectors:
+      article: a[href]
+    max_items: 20
+
+# ── 兜底源（仅用于 requests 也无法访问的源）──
+playwright_sources: []
+
+auto_sources: []

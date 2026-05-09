@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""汽车行业舆情监控 V4.1 — 统一入口"""
+"""汽车行业舆情监控 V4.3 — 统一入口 + 超级反爬"""
 import asyncio
 import gc
 import json
@@ -26,6 +26,8 @@ from collector.web_scraper import WebScraper
 from collector.weibo_collector import collect as weibo_collect
 from collector.auto_media import AutoScraper
 from collector.playwright_scraper import PlaywrightScraper
+from collector.stealth_scraper import SuperStealthScraper
+from collector.ai_scraper import AIScraper
 from processor.brand_matcher import match_brand, strip_html, is_financial_brief, is_digest, is_ugc, is_opinion
 from processor.scoring import calc_article_score, score_tier
 from processor.keyworder import extract_keywords
@@ -34,7 +36,7 @@ from processor.classifier import classify_dimension
 from processor.llm_classifier import classify_with_llm
 from processor.observability import (
     new_trace_id, get_funnel, DropReason,
-    log_trace, check_html_validity, save_fail_snapshot,
+    log_trace,
 )
 from reporter.builder import ReportBuilder
 from reporter.feishu import send_daily as feishu_daily, send_weekly as feishu_weekly, send_monthly as feishu_monthly
@@ -49,6 +51,8 @@ rss = RssFetcher()
 web = WebScraper()
 auto = AutoScraper()
 pw = PlaywrightScraper()
+stealth = SuperStealthScraper()  # 新增超级反爬采集器
+ai_scraper = AIScraper({'api_key': AI_API_KEY, 'api_url': AI_API_URL, 'model': AI_MODEL})
 health = SourceHealth(db)
 builder = ReportBuilder(db)
 emailer = Emailer(EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECIPIENTS, SMTP_SERVER, SMTP_PORT)
@@ -73,6 +77,7 @@ async def news_collect():
         web_items = await web.scrape_all()
         auto_items = await auto.scrape_all()
         pw_items = await pw.scrape_all()
+        stealth_items = await stealth.scrape_all()  # 新增超级反爬采集
         # 源级别统计 — 从各采集器获取实际源数量
         from v2.constants import RSS_FEEDS, WEB_FEEDS
         from sources import get_auto_feeds, get_playwright_feeds
@@ -90,9 +95,13 @@ async def news_collect():
         health.record_rss('RSS聚合', len(rss_items))
         health.record_web('Web抓取', len(web_items))
         health.record_auto('汽车垂媒', len(auto_items))
-        all_items = rss_items + web_items + auto_items + pw_items
+        health.record_pw('Playwright', len(pw_items))
+        health.record_stealth('超级反爬', len(stealth_items))
+        ai_items = await ai_scraper.scrape_all()
+        logger.info(f"AI爬虫采集: {len(ai_items)} 条")
+        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)} + PW {len(pw_items)} + SuperStealth {len(stealth_items)} + AI {len(ai_items)}")
+        all_items = rss_items + web_items + auto_items + pw_items + stealth_items + ai_items
         funnel.raw_captured = len(all_items)
-        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)} + PW {len(pw_items)} = {len(all_items)}")
         enriched = 0
         for raw in all_items:
             tid = new_trace_id()
@@ -146,14 +155,16 @@ async def news_collect():
                 # 维度分类
                 dim = classify_dimension(title, content)
                 if not dim:
-                    log_trace(tid, '[CLASSIFY:LLM]', title)
+                    logger.info(f"[DIM:LLM] {title[:50]} | 关键词未命中 → LLM分类")
                     dim = await classify_with_llm(title, content, AI_API_KEY, AI_API_URL, AI_MODEL)
                     if not dim:
                         funnel.count_drop(DropReason.NO_DIMENSION)
+                        logger.info(f"[DIM:DROP] {title[:60]} | 品牌={brand} | 四维度未命中(关键词+LLM均失败)")
                         log_trace(tid, '[FILTER:NO_DIM]', title)
                         continue
                 funnel.dimension_pass += 1
-                log_trace(tid, '[CLASSIFY]', title, dim)
+                if dim:
+                    logger.info(f"[DIM:PASS] {dim} | {title[:50]}")
 
                 if is_financial_brief(title, content):
                     funnel.count_drop(DropReason.FINANCIAL_BRIEF)
@@ -211,7 +222,7 @@ async def weibo_collect_task():
                 heat=it.get('heat', 0))
             if result['is_new']:
                 new_count += 1
-        await db.end_stale_events(hours=3)
+        await db.end_stale_events(hours=24)
         if len(items) == 0:
             logger.info(f"微博热搜: 本轮无汽车品牌上榜（51条热搜中0条命中，正常现象）")
         else:
@@ -223,13 +234,13 @@ async def weibo_collect_task():
     finally:
         next_min = random.randint(57, 67)
         try:
-            scheduler.reschedule_job('weibo', trigger=IntervalTrigger(minutes=next_min))
-        except Exception:
             try:
+                scheduler.reschedule_job('weibo', trigger=IntervalTrigger(minutes=next_min))
+            except Exception:
                 scheduler.add_job(weibo_collect_task, IntervalTrigger(minutes=next_min), id='weibo',
                                   max_instances=1, coalesce=True, replace_existing=True)
-            except Exception:
-                pass
+        except Exception:
+            logger.error(f"微博调度异常: 将在 {next_min} 分钟后由守护进程重试")
         logger.info(f"微博下次采集: {next_min} 分钟后")
 
 
@@ -338,7 +349,7 @@ async def lifespan(app: FastAPI):
     if not ok:
         logger.error("启动自检失败，请检查 system/requirements.txt 安装状态")
     else:
-        logger.info("[V4.1] Database started")
+        logger.info("[V4.3] Database started")
 
     scheduler.add_job(news_collect, IntervalTrigger(hours=1), id='news',
                       replace_existing=True, max_instances=1, coalesce=True)
@@ -354,7 +365,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(clean_task, CronTrigger(hour=9, minute=5), id='clean',
                       replace_existing=True, max_instances=1, coalesce=True)
     scheduler.start()
-    logger.info("[V4.1] Scheduler: 新闻/60m, 微博/57~67m(随机), 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
+    logger.info("[V4.3] Scheduler: 新闻/60m, 微博/57~67m(随机), 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
 
     asyncio.create_task(news_collect())
     asyncio.create_task(weibo_collect_task())
@@ -369,15 +380,15 @@ async def lifespan(app: FastAPI):
     global _session
     if _session and not _session.closed:
         await _session.close()
-    logger.info("[V4.1] Shutdown")
+    logger.info("[V4.3] Shutdown")
 
 
-app = FastAPI(title='汽车行业舆情监控 V4.1', version='4.1.0', lifespan=lifespan)
+app = FastAPI(title='汽车行业舆情监控 V4.3', version='4.3.0', lifespan=lifespan)
 
 
 @app.get('/')
 async def root():
-    return {'status': 'running', 'version': '4.1.0', 'message': '汽车行业舆情监控 V4.1', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    return {'status': 'running', 'version': '4.3.0', 'message': '汽车行业舆情监控 V4.3 (超级反爬)', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 
 @app.get('/health')
@@ -415,5 +426,9 @@ async def api_monthly():
 if __name__ == '__main__':
     import json
     import uvicorn
-    logger.info('[V4.1] Starting...')
+    logger.info('[V4.3] Starting...')
     uvicorn.run('main:app', host='0.0.0.0', port=8001, reload=False)
+
+
+
+

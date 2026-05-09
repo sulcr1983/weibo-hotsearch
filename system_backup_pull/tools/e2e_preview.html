@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feishu Card Preview - Playwright E2E Test</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8EAED;display:flex;flex-direction:column;align-items:center;padding:30px 20px;font-family:-apple-system,BlinkMacSystemFont,'Microsoft YaHei','PingFang SC',sans-serif;color:#111827}
+h1{font-size:18px;margin-bottom:20px;color:#333}
+.card{max-width:520px;width:100%;background:#fff;border-radius:14px;box-shadow:0 3px 16px rgba(0,0,0,.10);overflow:hidden;margin-bottom:28px}
+.card-header{padding:15px 22px;color:#fff;font-size:15px;font-weight:700}
+.card-header.wathet{background:linear-gradient(135deg,#4A90D9,#357ABD)}
+.card-body{padding:18px 22px;line-height:1.7;font-size:14px}
+.card-body strong{font-weight:700;color:#111827}
+.card-body a{color:#2563EB;text-decoration:none}
+.card-body a:hover{text-decoration:underline}
+.divider{border:none;border-top:1px solid #E5E7EB;margin:14px 0}
+.stat-row{font-size:13px;color:#6B7280;margin-bottom:6px}
+.section-title{font-size:15px;font-weight:700;margin:12px 0 8px;color:#111827}
+.item{margin-bottom:5px;line-height:1.6}
+.note{font-size:12px;color:#9CA3AF;margin:3px 0 8px}
+.footer-note{text-align:center;color:#9CA3AF;font-size:12px;margin-top:14px}
+.tag-hot{color:#DC2626;font-weight:600;font-size:12px}
+.tag-new{color:#16A34A;font-weight:600;font-size:12px}
+.tag-boom{color:#DC2626;font-weight:700;font-size:12px}
+.tag-brand{font-weight:700}
+.section-note{text-align:center;color:#9CA3AF;font-size:13px;padding:10px 0}
+.verify-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px}
+.verify-ok{background:#DCFCE7;color:#166534}
+.verify-warn{background:#FEF3C7;color:#92400E}
+.verify-err{background:#FEE2E2;color:#991B1B}
+.url-line{font-family:monospace;font-size:11px;color:#6B7280;word-break:break-all;margin:2px 0;padding:3px 8px;background:#F9FAFB;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>📋 飞书卡片端到端验证预览</h1>
+<div class="card">
+<div class="card-header wathet">🚗 昨日汽车行业舆情热点新闻</div>
+<div class="card-body">
+<div class="section-title"><strong>昨日汽车行业舆情热点新闻</strong><br><span style="color:#9CA3AF">2026-05-04</span></div>
+<div class="divider"></div>
+<div class="stat-row">📊 总计监测 <strong>11</strong> 条　|　📰 新闻 <span style="color:#F59E0B"><strong>5</strong></span> 条　|　🔥 热搜 <span style="color:#E74C3C"><strong>6</strong></span> 条</div>
+<div class="divider"></div>
+<div class="section-title"><strong>🔥 微博热搜 · 6条</strong></div>
+<div class="item"><span style="color:#FF6900"><strong>小米汽车</strong></span> <strong>小米SU7Ultra纽北圈速突破7分</strong> <a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E7%BA%BD%E5%8C%97%E5%9C%88%E9%80%9F%E7%AA%81%E7%A0%B47%E5%88%86" target="_blank">🔗</a> 🕐×5 <span style="color:#FF4D4F">爆</span></div>
+<div class="item"><span style="color:#E74C3C"><strong>特斯拉</strong></span> <strong>特斯拉FSD获批</strong> <a href="https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E8%8E%B7%E6%89%B9" target="_blank">🔗</a> 🕐×7 <span style="color:#FF4D4F">爆</span></div>
+<div class="item"><span style="color:#C0392B"><strong>比亚迪</strong></span> <strong>比亚迪海鸥荣耀版上市</strong> <a href="https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E8%8D%A3%E8%80%80%E7%89%88%E4%B8%8A%E5%B8%82" target="_blank">🔗</a> 🕐×3 <span style="color:#FF4D4F">热</span></div>
+<div class="item"><span style="color:#CE0E2D"><strong>鸿蒙智行</strong></span> <strong>问界M9大定破20万台</strong> <a href="https://s.weibo.com/weibo?q=%E9%97%AE%E7%95%8CM9%E5%A4%A7%E5%AE%9A%E7%A0%B420%E4%B8%87%E5%8F%B0" target="_blank">🔗</a> 🕐×4 <span style="color:#FF4D4F">热</span></div>
+<div class="item"><span style="color:#2E6BE6"><strong>蔚来汽车</strong></span> <strong>蔚来中石化换电站</strong> <a href="https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5%E6%8D%A2%E7%94%B5%E7%AB%99" target="_blank">🔗</a> 🕐×2 <span style="color:#FF4D4F">新</span></div>
+<div class="item"><span style="color:#0052D9"><strong>零跑汽车</strong></span> <strong>零跑交付创历史新高</strong> <a href="https://s.weibo.com/weibo?q=%E9%9B%B6%E8%B7%91%E4%BA%A4%E4%BB%98%E5%88%9B%E5%8E%86%E5%8F%B2%E6%96%B0%E9%AB%98" target="_blank">🔗</a> 🕐×2 <span style="color:#FF4D4F">新</span></div>
+<div class="divider"></div>
+<div class="section-title"><strong>📰 新闻热点 · 5条</strong></div>
+<div class="item"><span style="color:#FF6900"><strong>小米汽车</strong></span> <span style="color:#9CA3AF">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://www.d1ev.com/news/shichang/297741" target="_blank">小米汽车4月交付量达3万台</a></div>
+<div class="note">小米汽车4月交付量达3万台 · 第一电动 · 2026-05-04 13:23</div>
+<div class="item"><span style="color:#0052D9"><strong>零跑汽车</strong></span> <span style="color:#9CA3AF">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://www.d1ev.com/news/shichang/297740" target="_blank">零跑4月交付71387台，同比增73.9%</a></div>
+<div class="note">零跑4月交付71387台 · 第一电动 · 2026-05-04 13:23</div>
+<div class="item"><span style="color:#2E6BE6"><strong>蔚来汽车</strong></span> <span style="color:#9CA3AF">1条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://auto.gasgoo.com/news/202605/1I70456262C110.shtml" target="_blank">蔚来4月交付新车29356台</a></div>
+<div class="note">蔚来4月交付新车29356台 · 盖世汽车 · 2026-05-04 13:23</div>
+<div class="item"><span style="color:#E74C3C"><strong>特斯拉</strong></span> <span style="color:#9CA3AF">2条</span></div>
+<div class="item"><strong>⚙️ ⚙️ 核心活动</strong></div>
+<div class="item">• <a href="https://www.d1ev.com/news/qiye/297670" target="_blank">特斯拉电动卡车Semi进入量产新阶段 首辆量产车已下线</a></div>
+<div class="note">特斯拉Semi进入量产新阶段 · 第一电动 · 2026-05-04 13:23</div>
+<div class="item">• <a href="https://www.sohu.com/a/1018195200_114760" target="_blank">特斯拉Cybercab高调亮相迈阿密</a></div>
+<div class="note">特斯拉Cybercab亮相迈阿密 · 搜狐 · 2026-05-04 13:23</div>
+<div class="divider"></div>
+<div class="note">生成时间：2026-05-05 09:00 | 汽车行业舆情监控系统</div>
+<div class="footer-note">生成时间：2026-05-05 09:00 | 汽车行业舆情监控系统</div>
+</div></div>
+<div class="card">
+<div class="card-header" style="background:linear-gradient(135deg,#00B4B4,#00848A)">🔗 所有链接可点击性验证</div>
+<div class="card-body">
+<div class="section-title">🔥 微博热搜链接</div>
+<div class="item" style="margin-bottom:8px"><strong>小米SU7Ultra纽北圈速突破7分</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E7%BA%BD%E5%8C%97%E5%9C%88%E9%80%9F</div><a href="https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E7%BA%BD%E5%8C%97%E5%9C%88%E9%80%9F%E7%AA%81%E7%A0%B47%E5%88%86" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>特斯拉FSD获批</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E8%8E%B7%E6%89%B9</div><a href="https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E8%8E%B7%E6%89%B9" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>比亚迪海鸥荣耀版上市</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E8%8D%A3%E8%80%8</div><a href="https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E8%8D%A3%E8%80%80%E7%89%88%E4%B8%8A%E5%B8%82" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>问界M9大定破20万台</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E9%97%AE%E7%95%8CM9%E5%A4%A7%E5%AE%9A%E7%A0%B420%E4%B8%87%E5%</div><a href="https://s.weibo.com/weibo?q=%E9%97%AE%E7%95%8CM9%E5%A4%A7%E5%AE%9A%E7%A0%B420%E4%B8%87%E5%8F%B0" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>蔚来中石化换电站</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5%E6%8D%A2%E7%94%B5%E7%AB%99</div><a href="https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5%E6%8D%A2%E7%94%B5%E7%AB%99" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>零跑交付创历史新高</strong> <span class="verify-ok verify-badge">✓ 安全(无中文)</span><br><div class="url-line">编码后: https://s.weibo.com/weibo?q=%E9%9B%B6%E8%B7%91%E4%BA%A4%E4%BB%98%E5%88%9B%E5%8E%86%E5%8F%B</div><a href="https://s.weibo.com/weibo?q=%E9%9B%B6%E8%B7%91%E4%BA%A4%E4%BB%98%E5%88%9B%E5%8E%86%E5%8F%B2%E6%96%B0%E9%AB%98" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="section-title" style="margin-top:16px">📰 新闻链接</div>
+<div class="item" style="margin-bottom:8px"><strong>特斯拉电动卡车Semi进入量产新阶段 首辆量产车已下线</strong> <span class="verify-ok verify-badge">✓ ASCII URL</span><br><div class="url-line">https://www.d1ev.com/news/qiye/297670</div><a href="https://www.d1ev.com/news/qiye/297670" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>蔚来4月交付新车29356台</strong> <span class="verify-ok verify-badge">✓ ASCII URL</span><br><div class="url-line">https://auto.gasgoo.com/news/202605/1I70456262C110.shtml</div><a href="https://auto.gasgoo.com/news/202605/1I70456262C110.shtml" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>零跑4月交付71387台，同比增73.9%</strong> <span class="verify-ok verify-badge">✓ ASCII URL</span><br><div class="url-line">https://www.d1ev.com/news/shichang/297740</div><a href="https://www.d1ev.com/news/shichang/297740" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>小米汽车4月交付量达3万台</strong> <span class="verify-ok verify-badge">✓ ASCII URL</span><br><div class="url-line">https://www.d1ev.com/news/shichang/297741</div><a href="https://www.d1ev.com/news/shichang/297741" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="item" style="margin-bottom:8px"><strong>特斯拉Cybercab高调亮相迈阿密</strong> <span class="verify-ok verify-badge">✓ ASCII URL</span><br><div class="url-line">https://www.sohu.com/a/1018195200_114760</div><a href="https://www.sohu.com/a/1018195200_114760" target="_blank" style="color:#2563EB;font-size:12px">🔗 点击测试</a></div>
+<div class="divider"></div>
+<div style="font-size:14px;font-weight:600">链接总计: 11 | 可点击: 11/11</div>
+</div></div>
+<div class="card">
+<div class="card-header" style="background:#1E293B">🌐 真实URL可达性测试结果</div>
+<div class="card-body">
+<div class="stat-row">测试时间: 2026-05-05 · 从服务器直接测试</div>
+<div class="item" style="margin-bottom:4px"><span style="color:#10B981">200 OK</span> <span class="verify-ok verify-badge">✓ 真实</span><br><span style="font-size:11px;color:#6B7280">https://www.d1ev.com/news/qiye/297670</span></div>
+<div class="item" style="margin-bottom:4px"><span style="color:#10B981">200 OK</span> <span class="verify-ok verify-badge">✓ 真实</span><br><span style="font-size:11px;color:#6B7280">https://auto.gasgoo.com/news/202605/1I70456212C501.shtml</span></div>
+<div class="item" style="margin-bottom:4px"><span style="color:#10B981">200 OK</span> <span class="verify-ok verify-badge">✓ 真实</span><br><span style="font-size:11px;color:#6B7280">https://www.sohu.com/a/1018195200_114760</span></div>
+<div class="item" style="margin-bottom:4px"><span style="color:#EF4444">404 Not Found</span> <span class="verify-err verify-badge">✗ Mock/假链接</span><br><span style="font-size:11px;color:#6B7280">https://www.avatr.com/news/forbidden-city</span></div>
+<div class="item" style="margin-bottom:4px"><span style="color:#EF4444">404 Not Found</span> <span class="verify-err verify-badge">✗ Mock/假链接</span><br><span style="font-size:11px;color:#6B7280">https://www.byd.com/cn/news/han-ev-flash-charge</span></div>
+<div class="divider"></div>
+<div style="font-size:13px;color:#6B7280">✅ 3个真实新闻URL (200 OK) · ❌ 2个假/mock URL已清理 · ⚠ 微博URL使用s.weibo.com搜索链接（编码后安全）</div>
+</div></div>
+</body></html>

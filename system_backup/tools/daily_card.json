@@ -1,0 +1,225 @@
+{
+  "msg_type": "interactive",
+  "card": {
+    "header": {
+      "title": {
+        "tag": "plain_text",
+        "content": "🚗 昨日汽车行业舆情热点新闻"
+      },
+      "template": "wathet"
+    },
+    "elements": [
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**昨日汽车行业舆情热点新闻**\n<font color=\"#9CA3AF\">2026-05-04</font>"
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "📊 总计监测 **13** 条　|　📰 新闻 <font color=\"#F59E0B\">**7**</font> 条　|　🔥 热搜 <font color=\"#E74C3C\">**6**</font> 条"
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**🔥 微博热搜 · 6条**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#FF6900\">**小米汽车**</font> **小米SU7Ultra交付破万** [🔗](https://s.weibo.com/weibo?q=%E5%B0%8F%E7%B1%B3SU7Ultra%E4%BA%A4%E4%BB%98%E7%A0%B4%E4%B8%87) 🕐×3 <font color=\"#FF4D4F\">热</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#C0392B\">**比亚迪**</font> **比亚迪海鸥新款上市** [🔗](https://s.weibo.com/weibo?q=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E9%B8%A5%E6%96%B0%E6%AC%BE%E4%B8%8A%E5%B8%82) 🕐×2 <font color=\"#FF4D4F\">新</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#E74C3C\">**特斯拉**</font> **特斯拉FSD在华获批** [🔗](https://s.weibo.com/weibo?q=%E7%89%B9%E6%96%AF%E6%8B%89FSD%E5%9C%A8%E5%8D%8E%E8%8E%B7%E6%89%B9) 🕐×5 <font color=\"#FF4D4F\">爆</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#16213e\">**蔚来**</font> **蔚来ET9发布即交付** [🔗](https://s.weibo.com/weibo?q=%E8%94%9A%E6%9D%A5ET9%E5%8F%91%E5%B8%83%E5%8D%B3%E4%BA%A4%E4%BB%98)"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#FF6900\">**小米汽车**</font> **雷军回应SU7质量质疑** [🔗](https://s.weibo.com/weibo?q=%E9%9B%B7%E5%86%9B%E5%9B%9E%E5%BA%94SU7%E8%B4%A8%E9%87%8F%E8%B4%A8%E7%96%91) 🕐×2 <font color=\"#FF4D4F\">热</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#16213e\">**小鹏汽车**</font> **小鹏MONA首月订单破5万** [🔗](https://s.weibo.com/weibo?q=%E5%B0%8F%E9%B9%8FMONA%E9%A6%96%E6%9C%88%E8%AE%A2%E5%8D%95%E7%A0%B45%E4%B8%87) <font color=\"#FF4D4F\">新</font>"
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**📰 新闻热点 · 7条**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#FF6900\">**小米汽车**</font> <font color=\"#9CA3AF\">1条</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**⚙️ ⚙️ 核心活动**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "• [小米SU7 Ultra开启首批交付 雷军亲自到场](https://auto.gasgoo.com/news/202605/1I70456301C501.shtml)"
+        }
+      },
+      {
+        "tag": "note",
+        "elements": [
+          {
+            "tag": "plain_text",
+            "content": "小米SU7 Ultra开启首批交付 · 盖世汽车 · 2026-05-04 10:15"
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#4A90D9\">**理想汽车**</font> <font color=\"#9CA3AF\">1条</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "** 其他**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "• [理想L7 Pro起售价调整至22.98万 应对市场竞争](https://new.qq.com/rain/a/20260504A0012345)"
+        }
+      },
+      {
+        "tag": "note",
+        "elements": [
+          {
+            "tag": "plain_text",
+            "content": "理想L7 Pro起售价调整至22.98万 · 腾讯新闻 · 2026-05-04 13:00"
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#C0392B\">**比亚迪**</font> <font color=\"#9CA3AF\">1条</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**⚙️ ⚙️ 核心活动**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "• [比亚迪海鸥荣耀版上市售6.98万起 续航超400km](https://www.d1ev.com/news/xinche/20260504123456.shtml)"
+        }
+      },
+      {
+        "tag": "note",
+        "elements": [
+          {
+            "tag": "plain_text",
+            "content": "比亚迪海鸥荣耀版上市售6.98万起 · 第一电动 · 2026-05-04 14:30"
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "<font color=\"#E74C3C\">**特斯拉**</font> <font color=\"#9CA3AF\">1条</font>"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**⚙️ ⚙️ 核心活动**"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "• [特斯拉FSD最新版本在国内获批 上海率先开放路测](https://www.autohome.com.cn/news/202605/4/1234567.html)"
+        }
+      },
+      {
+        "tag": "note",
+        "elements": [
+          {
+            "tag": "plain_text",
+            "content": "特斯拉FSD最新版本在国内获批 · 汽车之家 · 2026-05-04 09:00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "note",
+        "elements": [
+          {
+            "tag": "plain_text",
+            "content": "生成时间：2026-05-05 09:00 | 汽车行业舆情监控系统"
+          }
+        ]
+      }
+    ]
+  }
+}
