@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""汽车行业舆情监控 V4.3 — 统一入口 + 超级反爬"""
+"""汽车行业舆情监控 V6.0 — 统一入口 + 智能降级反爬"""
 import asyncio
 import gc
 import json
@@ -25,7 +25,6 @@ from collector.rss_fetcher import RssFetcher
 from collector.web_scraper import WebScraper
 from collector.weibo_collector import collect as weibo_collect
 from collector.auto_media import AutoScraper
-from collector.playwright_scraper import PlaywrightScraper
 from processor.brand_matcher import match_brand, strip_html, is_financial_brief, is_digest, is_ugc, is_opinion
 from processor.scoring import calc_article_score, score_tier
 from processor.keyworder import extract_keywords
@@ -48,7 +47,6 @@ db = Database(DB_PATH, WEIBO_DB_PATH)
 rss = RssFetcher()
 web = WebScraper()
 auto = AutoScraper()
-pw = PlaywrightScraper()
 health = SourceHealth(db)
 builder = ReportBuilder(db)
 emailer = Emailer(EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECIPIENTS, SMTP_SERVER, SMTP_PORT)
@@ -72,27 +70,20 @@ async def news_collect():
         rss_items = await rss.fetch_all()
         web_items = await web.scrape_all()
         auto_items = await auto.scrape_all()
-        pw_items = await pw.scrape_all()
-        # 源级别统计 — 从各采集器获取实际源数量
         from v2.constants import RSS_FEEDS, WEB_FEEDS
-        from sources import get_auto_feeds, get_playwright_feeds
-        _auto_feeds = get_auto_feeds()
-        _playwright_feeds = get_playwright_feeds()
+        from collector.auto_media import AUTO_SOURCES
         funnel.rss_sources = len(RSS_FEEDS)
         funnel.web_sources = len(WEB_FEEDS)
-        funnel.auto_sources = len(_auto_feeds)
-        funnel.pw_sources = len(_playwright_feeds)
+        funnel.auto_sources = len(AUTO_SOURCES)
         funnel.rss_success = funnel.rss_sources if rss_items else 0
         funnel.web_success = funnel.web_sources if web_items else 0
         funnel.auto_success = funnel.auto_sources if auto_items else 0
-        funnel.pw_success = funnel.pw_sources if pw_items else 0
 
         health.record_rss('RSS聚合', len(rss_items))
         health.record_web('Web抓取', len(web_items))
         health.record_auto('汽车垂媒', len(auto_items))
-        health.record_pw('Playwright', len(pw_items))
-        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)} + PW {len(pw_items)}")
-        all_items = rss_items + web_items + auto_items + pw_items
+        logger.info(f"采集: RSS {len(rss_items)} + Web {len(web_items)} + 垂媒 {len(auto_items)}")
+        all_items = rss_items + web_items + auto_items
         funnel.raw_captured = len(all_items)
         enriched = 0
         for raw in all_items:
@@ -131,7 +122,6 @@ async def news_collect():
                     log_trace(tid, '[FILTER:OPINION]', title)
                     continue
 
-                # 评分
                 title_hit = match_brand(title, '')[0] is not None
                 score_info = calc_article_score(
                     title, content, raw.get('source', ''),
@@ -144,13 +134,11 @@ async def news_collect():
                     log_trace(tid, '[FILTER:SCORE]', title, f'score={score_info["score"]}')
                     continue
 
-                # 维度分类
                 dim = classify_dimension(title, content)
                 if not dim:
                     logger.info(f"[DIM:LLM] {title[:50]} | 关键词未命中 → LLM分类")
                     dim = await classify_with_llm(title, content, AI_API_KEY, AI_API_URL, AI_MODEL)
                     if not dim:
-                        # V5.3: LLM也失败时不丢弃，使用 other 维度
                         dim = 'other'
                         logger.info(f"[DIM:FALLBACK] {title[:60]} | 品牌={brand} | 关键词+LLM均未命中 → other维度")
                 funnel.dimension_pass += 1
@@ -210,7 +198,6 @@ async def news_collect():
 
 
 async def weibo_collect_job():
-    """独立的微博热搜采集任务（调度器自动管理间隔）"""
     logger.info(f"🔥 微博热搜采集: {datetime.now().strftime('%H:%M')}")
     try:
         sess = await get_weibo_session()
@@ -281,7 +268,6 @@ async def clean_task():
 
 
 def _startup_check() -> bool:
-    """启动自检：验证所有关键依赖 + 环境变量 + 目录权限，逐项打印 ✅/❌"""
     results = []
     all_ok = True
 
@@ -295,7 +281,6 @@ def _startup_check() -> bool:
         results.append(f"    ❌  {msg}")
         return False
 
-    # ── 1. pip 依赖检查 ──
     deps = [
         ('aiohttp', 'aiohttp'),
         ('aiosqlite', 'aiosqlite'),
@@ -308,6 +293,8 @@ def _startup_check() -> bool:
         ('uvicorn', 'uvicorn'),
         ('yaml', 'pyyaml'),
         ('dotenv', 'python-dotenv'),
+        ('cloudscraper', 'cloudscraper-enhanced'),
+        ('DrissionPage', 'DrissionPage'),
     ]
     for name, pkg in deps:
         try:
@@ -316,7 +303,6 @@ def _startup_check() -> bool:
         except ImportError:
             fail(f'依赖 [{name}] 未安装 (pip install {pkg})')
 
-    # ── 2. data/ 目录检查 ──
     from config import DATA_DIR, LOG_DIR
     for label, d in [('data/', DATA_DIR), ('logs/', LOG_DIR)]:
         if d.exists():
@@ -334,7 +320,6 @@ def _startup_check() -> bool:
             except Exception as e:
                 fail(f'目录 [{label}] 创建失败 ({d}): {e}')
 
-    # ── 3. 关键环境变量检查 ──
     env_vars = [
         ('FEISHU_WEBHOOK_URL', FEISHU_WEBHOOK_URL, '飞书推送 (缺少则日报/周报/月报无法推送)'),
         ('AI_API_KEY', AI_API_KEY, 'AI 总结 (缺少则 LLM 分类 & 周报总结不可用)'),
@@ -353,7 +338,6 @@ def _startup_check() -> bool:
         else:
             fail(f'环境变量 [{var_name}] 未设置 — {hint}')
 
-    # ── 4. 数据库文件检查 ──
     for label, db_path in [('MySQL DB (articles)', DB_PATH), ('Weibo DB', WEIBO_DB_PATH)]:
         db_file = Path(db_path)
         if db_file.exists():
@@ -366,7 +350,6 @@ def _startup_check() -> bool:
         else:
             ok(f'数据库 [{db_path}] 将自动创建')
 
-    # ── 5. 打印汇总 ──
     passed = sum(1 for r in results if '✅' in r)
     failed = sum(1 for r in results if '❌' in r)
     logger.info("启动自检: 开始")
@@ -377,7 +360,6 @@ def _startup_check() -> bool:
 
 
 def _setup_scheduler():
-    """配置并启动调度器，所有任务注册失败时优雅降级"""
     try:
         scheduler.add_job(
             news_collect,
@@ -388,6 +370,7 @@ def _setup_scheduler():
             coalesce=True,
             misfire_grace_time=300,
         )
+        logger.info("✅ 调度器: news_collect 已注册 (每小时)")
     except Exception as e:
         logger.error(f"news_collect 任务注册失败: {e}")
 
@@ -401,6 +384,7 @@ def _setup_scheduler():
             coalesce=True,
             misfire_grace_time=600,
         )
+        logger.info("✅ 调度器: weibo_collect 已注册 (57~67分钟)")
     except Exception as e:
         logger.error(f"weibo_collect 任务注册失败: {e}")
 
@@ -410,6 +394,7 @@ def _setup_scheduler():
             id='daily_report', replace_existing=True, max_instances=1,
             coalesce=True, misfire_grace_time=600,
         )
+        logger.info("✅ 调度器: daily_report 已注册 (每天09:00)")
     except Exception as e:
         logger.error(f"daily_report 任务注册失败: {e}")
 
@@ -419,6 +404,7 @@ def _setup_scheduler():
             id='weekly_report', replace_existing=True, max_instances=1,
             coalesce=True, misfire_grace_time=3600,
         )
+        logger.info("✅ 调度器: weekly_report 已注册 (周一08:00)")
     except Exception as e:
         logger.error(f"weekly_report 任务注册失败: {e}")
 
@@ -428,6 +414,7 @@ def _setup_scheduler():
             id='monthly_report', replace_existing=True, max_instances=1,
             coalesce=True, misfire_grace_time=7200,
         )
+        logger.info("✅ 调度器: monthly_report 已注册 (每月1日08:00)")
     except Exception as e:
         logger.error(f"monthly_report 任务注册失败: {e}")
 
@@ -437,11 +424,15 @@ def _setup_scheduler():
             id='clean_task', replace_existing=True, max_instances=1,
             coalesce=True, misfire_grace_time=600,
         )
+        logger.info("✅ 调度器: clean_task 已注册 (每天09:05)")
     except Exception as e:
         logger.error(f"clean_task 任务注册失败: {e}")
 
     scheduler.start()
-    logger.info("✅ 调度器启动完成")
+    jobs = scheduler.get_jobs()
+    logger.info(f"✅ 调度器启动完成, 共 {len(jobs)} 个任务")
+    for j in jobs:
+        logger.info(f"   {j.id}: next_run={j.next_run_time}")
 
 
 @asynccontextmanager
@@ -451,10 +442,10 @@ async def lifespan(app: FastAPI):
     if not ok:
         logger.error("启动自检失败，请检查 system/requirements.txt 安装状态")
     else:
-        logger.info("[V4.3] Database started")
+        logger.info("[V6.0] Database started")
 
     _setup_scheduler()
-    logger.info("[V4.3] Scheduler: 新闻/60m, 微博/57~67m(随机), 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
+    logger.info("[V6.0] Scheduler: 新闻/60m, 微博/57~67m, 日报/09:00, 周报/周一08:00, 月报/每月1日08:00")
 
     asyncio.create_task(news_collect())
     asyncio.create_task(weibo_collect_job())
@@ -463,21 +454,19 @@ async def lifespan(app: FastAPI):
 
     scheduler.shutdown()
     await rss.close()
-    await web.close()
-    await auto.close()
     await db.stop()
     global _session
     if _session and not _session.closed:
         await _session.close()
-    logger.info("[V4.3] Shutdown")
+    logger.info("[V6.0] Shutdown")
 
 
-app = FastAPI(title='汽车行业舆情监控 V4.3', version='4.3.0', lifespan=lifespan)
+app = FastAPI(title='汽车行业舆情监控 V6.0', version='6.0.0', lifespan=lifespan)
 
 
 @app.get('/')
 async def root():
-    return {'status': 'running', 'version': '4.3.0', 'message': '汽车行业舆情监控 V4.3 (超级反爬)', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    return {'status': 'running', 'version': '6.0.0', 'message': '汽车行业舆情监控 V6.0 (智能降级反爬)', 'updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 
 @app.get('/health')
@@ -489,7 +478,6 @@ async def api_health():
 
 @app.get('/status')
 async def status():
-    """详细系统状态（运维用）"""
     import os
     try:
         import psutil
@@ -509,7 +497,7 @@ async def status():
         article_count = weibo_count = -1
 
     return {
-        'version': 'V4.3',
+        'version': 'V6.0',
         'time': datetime.now().isoformat(),
         'scheduler_jobs': jobs,
         'db': {'articles': article_count, 'weibo_events': weibo_count},
@@ -548,7 +536,6 @@ async def api_monthly():
 
 @app.post('/test/email')
 async def test_email():
-    """邮件连通性测试"""
     try:
         emailer._send("测试邮件", "<h1>连通性测试</h1><p>邮件发送正常</p>")
         return {"ok": True}
@@ -557,11 +544,6 @@ async def test_email():
 
 
 if __name__ == '__main__':
-    import json
     import uvicorn
-    logger.info('[V4.3] Starting...')
+    logger.info('[V6.0] Starting...')
     uvicorn.run('main:app', host='0.0.0.0', port=8001, reload=False)
-
-
-
-

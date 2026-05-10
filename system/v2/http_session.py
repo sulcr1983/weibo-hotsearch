@@ -1,4 +1,4 @@
-"""HTTP会话管理器 V5.0 — 统一 aiohttp Session + cloudscraper fallback"""
+"""HTTP会话管理器 V6.0 — 统一 aiohttp Session + cloudscraper-enhanced fallback + DrissionPage兜底"""
 
 import asyncio
 import random
@@ -28,12 +28,14 @@ class SharedSession:
         async with SharedSession() as session:
             html = await session.fetch("https://...")
             html_cc = await session.fetch_with_cc("https://...")
+            html_dp = await session.fetch_with_dp("https://...")
     """
 
     def __init__(self, timeout: int = 25):
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._session: Optional[aiohttp.ClientSession] = None
-        self._cc = None  # cloudscraper lazy
+        self._cc = None
+        self._dp = None
 
     async def __aenter__(self):
         import ssl as _ssl
@@ -58,6 +60,12 @@ class SharedSession:
         if self._session and not self._session.closed:
             await self._session.close()
         self._session = None
+        if self._dp:
+            try:
+                self._dp.quit()
+            except Exception:
+                pass
+            self._dp = None
 
     async def fetch(self, url: str, extra_headers: dict = None, timeout: int = 20) -> Optional[str]:
         if not self._session:
@@ -73,15 +81,15 @@ class SharedSession:
             return None
 
     async def fetch_with_cc(self, url: str, timeout: int = 15) -> Optional[str]:
-        """cloudscraper 兜底（用于 Cloudflare 站点）"""
+        """cloudscraper-enhanced 兜底（用于 Cloudflare 站点）"""
         if self._cc is None:
             try:
                 import cloudscraper
                 self._cc = cloudscraper.create_scraper(
                     browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
                 )
-            except ImportError:
-                logger.warning("cloudscraper 未安装，无法兜底")
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"cloudscraper 不可用: {e}")
                 return None
         try:
             loop = asyncio.get_running_loop()
@@ -89,4 +97,37 @@ class SharedSession:
             return r.text if r.status_code == 200 else None
         except Exception as e:
             logger.debug(f"cloudscraper: {url[:60]} - {e}")
+            return None
+
+    async def fetch_with_dp(self, url: str, timeout: int = 30) -> Optional[str]:
+        """DrissionPage 兜底（用于强反爬站点，无WebDriver检测）"""
+        if self._dp is None:
+            try:
+                from DrissionPage import ChromiumPage, ChromiumOptions
+                co = ChromiumOptions()
+                co.headless()
+                co.set_argument('--no-sandbox')
+                co.set_argument('--disable-gpu')
+                co.set_argument('--disable-dev-shm-usage')
+                co.set_user_agent(get_random_ua())
+                self._dp = ChromiumPage(co)
+            except ImportError:
+                logger.warning("DrissionPage 未安装，无法浏览器兜底")
+                return None
+            except Exception as e:
+                logger.warning(f"DrissionPage 启动失败: {e}")
+                return None
+        try:
+            loop = asyncio.get_running_loop()
+
+            def _dp_get():
+                self._dp.get(url)
+                import time
+                time.sleep(random.uniform(1.5, 3.0))
+                return self._dp.html
+
+            html = await loop.run_in_executor(None, _dp_get)
+            return html
+        except Exception as e:
+            logger.debug(f"DrissionPage: {url[:60]} - {e}")
             return None
