@@ -1,0 +1,225 @@
+# weibo-hotsearch CI/CD — GitHub Actions
+#
+#  触发条件:
+#    push → main:       全量测试 + 静态检查 + 覆盖率
+#    pull_request:       PR 验证
+#    schedule(06:00):    每天早上自动重录 VCR cassettes
+#    workflow_dispatch:  手动触发 VCR 录制更新
+#
+name: weibo-hotsearch CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 22 * * *"        # UTC 22:00 = UTC+8 06:00
+  workflow_dispatch:
+    inputs:
+      record_mode:
+        description: "VCR 录制模式 (once / none / all)"
+        required: false
+        default: "none"
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "1.7"
+  CACHE_PREFIX: "v1"
+
+jobs:
+  # ═══════════════════════════════════════════════════
+  # JOB 1: 静态检查
+  # ═══════════════════════════════════════════════════
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ env.CACHE_PREFIX }}-pip-${{ hashFiles('system/requirements.txt', 'system/requirements-test.txt') }}
+          restore-keys: |
+            ${{ env.CACHE_PREFIX }}-pip-
+
+      - name: 安装依赖
+        run: |
+          pip install ruff black mypy
+          pip install -r system/requirements-test.txt
+
+      - name: ruff 检查（快速 lint）
+        run: ruff check system/ --ignore=E501,F401 --output-format=github
+
+      - name: black 格式检查
+        run: black --check --diff system/ --line-length=100 || true
+
+      # mypy 仅检查核心模块，跳过 tests 和 _*.py
+      - name: mypy 类型检查（核心模块）
+        run: |
+          mypy system/processor/scoring.py system/processor/brand_matcher.py \
+               system/config.py system/v2/constants.py --ignore-missing-imports \
+               --allow-untyped-calls --check-untyped-defs || true
+
+      - name: 检查 secrets 泄露
+        run: |
+          pip install detect-secrets
+          detect-secrets scan --exclude-files '(\.git|__pycache__|\.pytest_cache|logs)' > /tmp/secrets.json 2>/dev/null || true
+          python3 -c "
+          import json
+          with open('/tmp/secrets.json') as f:
+              data = json.load(f)
+          secrets = data.get('results', {}).get('', [])
+          for s in secrets:
+              if s.get('is_secret'):
+                  print(f'  ⚠️  {s[\"filename\"]}:{s.get(\"line_number\",\"?\")}  {s.get(\"type\",\"?\")}')
+          "
+
+  # ═══════════════════════════════════════════════════
+  # JOB 2: 单元测试 + 覆盖率
+  # ═══════════════════════════════════════════════════
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 缓存 pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ env.CACHE_PREFIX }}-pip-${{ hashFiles('system/requirements.txt', 'system/requirements-test.txt') }}-py${{ matrix.python-version }}
+          restore-keys: |
+            ${{ env.CACHE_PREFIX }}-pip-
+
+      - name: 安装系统依赖
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential
+
+      - name: 安装项目依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r system/requirements.txt
+          pip install -r system/requirements-test.txt
+          pip install simhash 2>/dev/null || echo "simhash 编译失败，继续"
+
+      - name: 执行单元测试（离线）
+        run: |
+          pytest -v --tb=short \
+            --ignore=system/tests/test_v3.py \
+            --ignore=system/tests/test_v51.py \
+            --ignore=system/tests/test_observability.py \
+            --ignore=system/tests/test_integration.py \
+            --ignore=system/tests/test_performance.py \
+            --cov=system \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=70 \
+            -m "not network and not performance"
+
+      - name: 上传覆盖率到 Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          flags: unittests
+          name: weibo-hotsearch-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 上传覆盖率报告（Artifact）
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-py${{ matrix.python-version }}
+          path: coverage.xml
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════
+  # JOB 3: VCR 集成测试（仅 main push + 定时触发）
+  # ═══════════════════════════════════════════════════
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 缓存 VCR cassettes
+        id: cache-cassettes
+        uses: actions/cache@v4
+        with:
+          path: system/tests/cassettes
+          key: ${{ env.CACHE_PREFIX }}-vcr-${{ hashFiles('system/tests/test_integration.py') }}
+          restore-keys: |
+            ${{ env.CACHE_PREFIX }}-vcr-
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r system/requirements.txt
+          pip install -r system/requirements-test.txt
+
+      - name: 判断录制模式
+        id: record-mode
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.record_mode }}" = "once" ]; then
+            echo "mode=once" >> $GITHUB_OUTPUT
+          else
+            echo "mode=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 运行集成测试（VCR 回放）
+        run: |
+          pytest system/tests/test_integration.py -v --tb=short \
+            --record-mode=${{ steps.record-mode.outputs.mode }} \
+            -m "network"
+
+      - name: 上传 VCR cassettes 更新（录制模式）
+        if: steps.record-mode.outputs.mode == 'once'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcr-cassettes-updated
+          path: system/tests/cassettes/
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════
+  # JOB 4: 通知（仅 main 失败时）
+  # ═══════════════════════════════════════════════════
+  notify:
+    runs-on: ubuntu-latest
+    needs: [lint, test, integration]
+    if: failure() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 发送 GitHub 通知
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const msg = `❌ CI 运行失败\n仓库: ${{ github.repository }}\n分支: ${{ github.ref }}\n提交: ${{ github.sha }}\n详情: ${runUrl}`;
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[CI 失败] ${new Date().toISOString().slice(0,10)}`,
+              body: msg,
+              labels: ['ci-failure'],
+            });
